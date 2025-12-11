@@ -20,6 +20,22 @@ sniffio = ">=1.1"
 trio = ["trio (>=0.31.0)"]
 
 [[package]]
+name = "aws-request-signer"
+version = "1.2.0"
+description = "A python library to sign AWS requests using AWS Signature V4."
+optional = false
+python-versions = ">=3.6.1,<4.0.0"
+groups = ["main"]
+files = [
+    {file = "aws_request_signer-1.2.0-py3-none-any.whl", hash = "sha256:eb5bca05d5055a608078be5f47bb6a333f1e5c383ed7603a75289e04203a10a6"},
+    {file = "aws_request_signer-1.2.0.tar.gz", hash = "sha256:0d5a2b0ced30cfde0585db9ac7b56c419e41e529c17ec1d0a0ba16e26e827be5"},
+]
+
+[package.extras]
+demo = ["requests (>=2.21,<3.0)", "requests_toolbelt (>=0.8.0,<0.9.0)"]
+requests = ["requests (>=2.21,<3.0)"]
+
+[[package]]
 name = "certifi"
 version = "2025.11.12"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -42,6 +58,24 @@ files = [
     {file = "h11-0.16.0-py3-none-any.whl", hash = "sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"},
     {file = "h11-0.16.0.tar.gz", hash = "sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1"},
 ]
+
+[[package]]
+name = "handtruck"
+version = "0.0.1"
+description = "Async S3 client using httpx & anyio"
+optional = false
+python-versions = "<4.0,>=3.11"
+groups = ["main"]
+files = [
+    {file = "handtruck-0.0.1-py3-none-any.whl", hash = "sha256:c27d20a0fdfa9dc3fd9de890ed2dcb6f37235330b583f668884cb591c3a909b0"},
+    {file = "handtruck-0.0.1.tar.gz", hash = "sha256:753701d1ef4e5113cc9955ca19b3d359a83fce772a0911212e85fe574cdb67ba"},
+]
+
+[package.dependencies]
+anyio = ">=3.7.1"
+aws-request-signer = "1.2.0"
+httpcore = {version = ">=1.0.8", markers = "python_version >= \"3.14\""}
+httpx = ">=0.28.1"
 
 [[package]]
 name = "httpcore"
@@ -119,5 +153,5 @@ files = [
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.14"
-content-hash = "11c6244cb11d6ceee50afdef9e667e066eb67d26ea21f8537685629a595e4673"
+python-versions = ">=3.14,<4.0"
+content-hash = "afb2c1ab9d10d49e7e119b7c9704e922eadf5a7fadd1df453e50d54bb943a2c4"

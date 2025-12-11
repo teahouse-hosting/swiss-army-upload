@@ -6,10 +6,11 @@ authors = [
     {name = "Jamie Bliss",email = "jamie@teahouse.cafe"}
 ]
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.14,<4.0"
 dependencies = [
     "anyio (>=4.11.0,<5.0.0)",
-    "httpx (>=0.28.1,<0.29.0)"
+    "httpx (>=0.28.1,<0.29.0)",
+    "handtruck (<0.2.0)"
 ]
 
 [tool.poetry]
