@@ -1,0 +1,22 @@
+set windows-powershell := true
+
+# Show this help
+@help:
+  just --list
+
+# Set up dev env
+install:
+  poetry install
+  pre-commit install
+
+# Run the test suite
+test *ARGS:
+  poetry run pytest --log-level=DEBUG {{ARGS}}
+
+# Run type checks
+types:
+  poetry run mypy
+
+build:
+  poetry build
+  # briefcase build

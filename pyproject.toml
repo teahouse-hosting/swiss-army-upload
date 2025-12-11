@@ -21,3 +21,111 @@ packages = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+
+
+# content below this line added by briefcase convert
+# This project was generated with 0.3.25 using template: https://github.com/beeware/briefcase-template @ v0.3.25
+[tool.briefcase]
+project_name = "Swiss Army Upload"
+bundle = "cafe.teahouse"
+version = "0.0.1"
+url = "https://codeberg.org/teahouse/swiss-army-upload"
+license.file = "LICENSE"
+author = "Jamie Bliss"
+author_email = "jamie@teahouse.cafe"
+
+[tool.briefcase.app.swiss-army-upload]
+formal_name = "Swiss Army Upload"
+description = ""
+long_description = """More details about the app should go here.
+"""
+sources = [
+    "src/swiss_army_upload",
+]
+test_sources = [
+    "tests",
+]
+console_app = true
+
+requires = [
+    # Add your cross-platform app requirements here
+]
+test_requires = [
+    # Add your cross-platform test requirements here
+]
+
+[tool.briefcase.app.swiss-army-upload.macOS]
+universal_build = true
+requires = [
+    # Add your macOS-specific app requirements here
+]
+
+[tool.briefcase.app.swiss-army-upload.linux]
+requires = [
+    # Add your Linux-specific app requirements here
+]
+
+[tool.briefcase.app.swiss-army-upload.linux.system.debian]
+system_requires = [
+    # Add any system packages needed at build the app here
+]
+
+system_runtime_requires = [
+    # Add any system packages needed at runtime here
+]
+
+[tool.briefcase.app.swiss-army-upload.linux.system.rhel]
+system_requires = [
+    # Add any system packages needed at build the app here
+]
+
+system_runtime_requires = [
+    # Add any system packages needed at runtime here
+]
+
+[tool.briefcase.app.swiss-army-upload.linux.system.suse]
+system_requires = [
+    # Add any system packages needed at build the app here
+]
+
+system_runtime_requires = [
+    # Add any system packages needed at runtime here
+]
+
+[tool.briefcase.app.swiss-army-upload.linux.system.arch]
+system_requires = [
+    # Add any system packages needed at build the app here
+]
+
+system_runtime_requires = [
+    # Add any system packages needed at runtime here
+]
+
+[tool.briefcase.app.swiss-army-upload.linux.flatpak]
+flatpak_runtime = "org.freedesktop.Platform"
+flatpak_runtime_version = "24.08"
+flatpak_sdk = "org.freedesktop.Sdk"
+
+[tool.briefcase.app.swiss-army-upload.windows]
+requires = [
+    # Add your Windows-specific app requirements here
+]
+
+# Mobile deployments
+[tool.briefcase.app.swiss-army-upload.iOS]
+supported = false
+
+[tool.briefcase.app.swiss-army-upload.android]
+supported = false
+
+# Web deployments
+[tool.briefcase.app.swiss-army-upload.web]
+supported = false
+
+
+[dependency-groups]
+dev = [
+    "mypy (>=1.19.0,<2.0.0)",
+    "pytest (>=9.0.2,<10.0.0)"
+]
