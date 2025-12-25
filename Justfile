@@ -13,6 +13,10 @@ install:
 test *ARGS:
   poetry run pytest --log-level=DEBUG {{ARGS}}
 
+# Run the command
+run *ARGS:
+  poetry run swiss-army-upload {{ARGS}}
+
 # Run type checks
 types:
   poetry run mypy
