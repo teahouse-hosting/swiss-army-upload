@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.14,<4.0"
 dependencies = [
     "anyio[trio] (>=4.12.0,<5.0.0)",
-    "httpx (>=0.28.1,<0.29.0)",
+    "httpx[http2] (>=0.28.1,<0.29.0)",
     "handtruck (<0.2.0)",
     "dykes @ git+https://github.com/AstraLuma/dykes.git@subcommands"
 ]

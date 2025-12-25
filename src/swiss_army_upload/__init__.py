@@ -4,6 +4,7 @@ import sys
 import typing as T
 
 import anyio
+import httpx
 
 import dykes
 
@@ -23,7 +24,7 @@ class GetCmd:
     Download one or more files
     """
 
-    src: T.Annotated[str, "URL to read from"]
+    src: T.Annotated[httpx.URL, "URL to read from"]
     dest: T.Annotated[Path, "Path to write to"]
 
 
@@ -34,7 +35,7 @@ class PutCmd:
     """
 
     src: T.Annotated[Path, "Path to read from"]
-    dest: T.Annotated[str, "URL to write to"]
+    dest: T.Annotated[httpx.URL, "URL to write to"]
 
 
 @dataclass
