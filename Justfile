@@ -28,4 +28,4 @@ build: _changelog
 
 # Generate changelog from forge releases
 _changelog:
-  touch CHANGELOG.md
+  poetry run python changelog.py
