@@ -21,6 +21,11 @@ run *ARGS:
 types:
   poetry run mypy
 
-build:
+# Build packages
+build: _changelog
   poetry build
   briefcase build
+
+# Generate changelog from forge releases
+_changelog:
+  touch CHANGELOG.md

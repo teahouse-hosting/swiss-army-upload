@@ -3,3 +3,4 @@
 /.*_cache/
 __pycache__/
 /logs/
+/CHANGELOG.md
