@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import sys
 import typing as T
 
 import anyio
@@ -47,9 +48,32 @@ class SAUArgs:
     put: dykes.Subparser[PutCmd] = None
 
 
+async def do_config(args):
+    print(f"config {args!r}")
+    ...
+
+
+async def do_get(args):
+    print(f"get {args!r}")
+    ...
+
+
+async def do_put(args):
+    print(f"put {args!r}")
+    ...
+
+
 async def main():
     args = dykes.parse_args(SAUArgs)
-    print(args)
+    if args.config is not None:
+        await do_config(args.config)
+    elif args.get is not None:
+        await do_get(args.get)
+    elif args.put is not None:
+        await do_put(args.put)
+    else:
+        # FIXME: Print usage
+        sys.exit("No command specified")
 
 
 def entrypoint():
