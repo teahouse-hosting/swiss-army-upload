@@ -23,4 +23,4 @@ types:
 
 build:
   poetry build
-  # briefcase build
+  briefcase build

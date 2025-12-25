@@ -2,3 +2,4 @@
 /build/
 /.*_cache/
 __pycache__/
+/logs/
