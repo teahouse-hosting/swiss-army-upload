@@ -4,9 +4,11 @@ import sys
 import typing as T
 
 import anyio
-import httpx
-
 import dykes
+import httpx
+import scr
+
+from .backends import get_backend, UnknownURLError
 
 
 @dataclass
@@ -49,32 +51,44 @@ class SAUArgs:
     put: dykes.Subparser[PutCmd] = None
 
 
-async def do_config(args):
+async def do_config(args: ConfigCmd):
     print(f"config {args!r}")
-    ...
 
 
-async def do_get(args):
+async def do_get(args: GetCmd):
     print(f"get {args!r}")
-    ...
+    backend = get_backend(args.src)
+    print(f"\t{backend=}")
+    async with backend:
+        if await backend.is_file(args.src):
+            backend.get_to_file(args.src, args.dest)
+        else:
+            raise NotImplementedError
 
 
-async def do_put(args):
+async def do_put(args: PutCmd):
     print(f"put {args!r}")
+    backend = get_backend(args.dest)
+    print(f"\t{backend=}")
     ...
 
 
 async def main():
-    args = dykes.parse_args(SAUArgs)
-    if args.config is not None:
-        await do_config(args.config)
-    elif args.get is not None:
-        await do_get(args.get)
-    elif args.put is not None:
-        await do_put(args.put)
-    else:
-        # FIXME: Print usage
-        sys.exit("No command specified")
+    async with scr.ainit():
+        args = dykes.parse_args(SAUArgs)
+
+        try:
+            if args.config is not None:
+                await do_config(args.config)
+            elif args.get is not None:
+                await do_get(args.get)
+            elif args.put is not None:
+                await do_put(args.put)
+            else:
+                # FIXME: Print usage
+                sys.exit("No command specified")
+        except UnknownURLError as exc:
+            sys.exit(str(exc.args[0]))
 
 
 def entrypoint():
