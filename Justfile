@@ -29,3 +29,7 @@ build: _changelog
 # Generate changelog from forge releases
 _changelog:
   poetry run python changelog.py
+
+# Run the command
+sau *ARGS:
+  poetry run swiss-army-upload {{ARGS}}
