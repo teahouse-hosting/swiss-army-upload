@@ -23,7 +23,16 @@ def _(ctx: object):
 
 
 def get_appdirs() -> platformdirs.PlatformDirs:
-    return platformdirs.PlatformDirs()
+    return platformdirs.PlatformDirs(
+        appname="swiss-army-upload",
+        appauthor="teahouse",
+        # TODO: Roaming?
+        # TODO: Versioned?
+        ensure_exists=True,
+        # Wish ensure_exists was asyncable, but directory creation should be
+        # cached and backgrounded by all OSes
+        opinion=True,
+    )
 
 
 scr.registry.register_factory(platformdirs.PlatformDirs, get_appdirs, enter=True)
