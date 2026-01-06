@@ -84,22 +84,20 @@ class TeahouseCredentials(
 
 
 class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
-    _http: httpx.AsyncClient
     _client: handtruck.S3Client
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self):
         self.exitstack = contextlib.AsyncExitStack()
-        async with self.exitstack, httpx.AsyncClient(http2=True) as self._http:
+        async with self.exitstack:
             yield self
 
     async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
+        http = await self.scr.aget(httpx.AsyncClient)
         creds = await self.exitstack.enter_async_context(
             TeahouseCredentials(self.scr, url.host)
         )
-        client = handtruck.S3Client(
-            url=creds.endpoint, client=self._http, credentials=creds
-        )
+        client = handtruck.S3Client(url=creds.endpoint, client=http, credentials=creds)
         return client, str(httpx.URL(url, host=creds.bucket, scheme="s3"))
 
     async def is_file(self, url: httpx.URL) -> bool:
