@@ -8,6 +8,18 @@ import scr
 from scr import scr_from
 
 
+class InvalidCredentials(Exception):
+    """
+    Raised when the credentials were rejected
+    """
+
+
+class UnknownSite(Exception):
+    """
+    Raised when the backend doesn't know the domain
+    """
+
+
 class Backend(abc.ABC):
     hinted_base: httpx.URL
     scr: scr.Container

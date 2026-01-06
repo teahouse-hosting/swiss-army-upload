@@ -8,7 +8,7 @@ import httpx
 import handtruck
 import scr
 
-from . import Backend
+from . import Backend, InvalidCredentials, UnknownSite
 
 
 SIGNER_ENV_MAP = {
@@ -19,6 +19,32 @@ SIGNER_ENV_MAP = {
     "AWS_SESSION_TOKEN": "session_token",
     # "BUCKET_NAME": ...,
 }
+
+
+class TeahouseAuth(httpx.Auth):
+    def __init__(self, saucer):
+        self.scr = saucer
+
+    def auth_flow(self, request):
+        # TODO: Do github OIDC stuff
+        resp = yield request
+        if resp.status_code == 403:
+            resp = yield httpx.Request(
+                "POST",
+                "https://counter.teahouse.cafe/auth/login/",
+                json={"email": "...", "password": "..."},
+                headers={"Accept": "application/json"},
+            )
+            try:
+                resp.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 400:
+                    raise InvalidCredentials(
+                        "Invalid credentials for ... at Teahouse"
+                    ) from exc
+                else:
+                    raise exc
+            yield request
 
 
 class TeahouseCredentials(
@@ -49,11 +75,14 @@ class TeahouseCredentials(
     async def _refresher(
         self, *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
     ) -> None:
+        auth = TeahouseAuth(self._scr)
         while True:
             async with self.refresh_lock:
                 resp = await self._client.post(
                     "https://counter.teahouse.cafe/upload/get-s3-config",
                     json={"domain": self.domain},
+                    auth=auth,
+                    headers={"Accept": "application/json"},
                 )
                 if resp.status_code == 200:
                     envvars = resp.json()
@@ -68,8 +97,17 @@ class TeahouseCredentials(
                     self.endpoint = envvars.get("AWS_ENDPOINT_URL_S3", None)
                     self.bucket = envvars.get("BUCKET_NAME", None)
                 else:
-                    resp.raise_for_status()
-                    raise RuntimeError("Unhandled status")
+                    try:
+                        resp.raise_for_status()
+                    except httpx.HTTPStatusError as exc:
+                        if exc.response.status_code == 400:
+                            raise UnknownSite(
+                                f"Domain {self.domain} not recognized"
+                            ) from exc
+                        else:
+                            raise exc
+                    else:
+                        raise RuntimeError("Unhandled status")
                 task_status.started()
                 sleep_time = 3600
             await anyio.sleep(sleep_time)
