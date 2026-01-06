@@ -9,6 +9,7 @@ import handtruck
 import scr
 
 from . import Backend, InvalidCredentials, UnknownSite
+from ..junk_drawer.github import github_oidc
 
 
 SIGNER_ENV_MAP = {
@@ -22,29 +23,51 @@ SIGNER_ENV_MAP = {
 
 
 class TeahouseAuth(httpx.Auth):
+    token: str | None = None
+
+    requires_response_body = True
+
     def __init__(self, saucer):
         self.scr = saucer
 
     def auth_flow(self, request):
-        # TODO: Do github OIDC stuff
+        # If we've stashed a token, reuse that
+        if self.token is not None:
+            request.headers["Authorization"] = f"Bearer {self.token}"
+
+        # Attempt the main request
         resp = yield request
+
+        # Teahouse needs us to auth
         if resp.status_code == 403:
-            resp = yield httpx.Request(
-                "POST",
-                "https://counter.teahouse.cafe/auth/login/",
-                json={"email": "...", "password": "..."},
-                headers={"Accept": "application/json"},
-            )
-            try:
-                resp.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                if exc.response.status_code == 400:
-                    raise InvalidCredentials(
-                        "Invalid credentials for ... at Teahouse"
-                    ) from exc
-                else:
-                    raise exc
-            yield request
+            # Check if we're in github and there's an OIDC token
+            oidc = yield from github_oidc()
+            if oidc is not None:
+                # There is an OIDC token, use that and stash it for later.
+                # We don't need to cache this because the actions environment is
+                # ephemeral and github wants us to do it more.
+                self.token = oidc
+                request.headers["Authorization"] = f"Bearer {self.token}"
+                yield request
+            else:
+                # No token, do user/pass auth with cookies
+                # (Cookies are implicitly saved by the global client)
+                resp = yield httpx.Request(
+                    "POST",
+                    "https://counter.teahouse.cafe/auth/login/",
+                    json={"email": "...", "password": "..."},
+                    headers={"Accept": "application/json"},
+                )
+                try:
+                    resp.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 400:
+                        raise InvalidCredentials(
+                            "Invalid credentials for ... at Teahouse"
+                        ) from exc
+                    else:
+                        raise exc
+                yield request
 
 
 class TeahouseCredentials(

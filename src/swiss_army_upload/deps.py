@@ -44,7 +44,10 @@ async def build_client(svcs_container):
     async with (
         SecureSavedJar(platdirs.user_cache_dir + "/cookies.blob") as jar,
         httpx.AsyncClient(
-            http2=True, cookies=jar, headers={"User-Agent": "swiss-army-upload/0.0.0"}
+            http2=True,
+            cookies=jar,
+            headers={"User-Agent": "swiss-army-upload/0.0.0"},
+            follow_redirects=True,
         ) as client,
     ):
         yield client
