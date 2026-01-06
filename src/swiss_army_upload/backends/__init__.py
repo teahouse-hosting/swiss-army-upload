@@ -1,15 +1,20 @@
 import abc
 import importlib.metadata
+import pathlib
 import typing
 
 import httpx
+import scr
+from scr import scr_from
 
 
 class Backend(abc.ABC):
     hinted_base: httpx.URL
+    scr: scr.Container
 
-    def __init__(self, hint: httpx.URL):
+    def __init__(self, ctx: object, hint: httpx.URL):
         self.hinted_base = hint
+        self.scr = scr_from(ctx)
 
     @abc.abstractmethod
     async def __aenter__(self) -> typing.Self: ...
@@ -17,12 +22,18 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     async def __aexit__(self, exc_type, exc_value, traceback): ...
 
+    @abc.abstractmethod
+    async def is_file(self, url: httpx.URL) -> bool: ...
+
+    @abc.abstractmethod
+    async def get_to_file(self, url: httpx.URL, file: pathlib.Path | str): ...
+
 
 class UnknownURLError(ValueError):
     pass
 
 
-def get_backend(url: httpx.URL) -> Backend:
+def get_backend(ctx: object, url: httpx.URL) -> Backend:
     try:
         (ep,) = importlib.metadata.entry_points(
             name=url.scheme, group="swiss_army_upload.backend"
@@ -32,4 +43,4 @@ def get_backend(url: httpx.URL) -> Backend:
             f"Don't know how to handle a {url.scheme!r} URL", url
         ) from exc
     backcls: type[Backend] = ep.load()
-    return backcls(url)
+    return backcls(ctx, url)

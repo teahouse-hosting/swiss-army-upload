@@ -5,6 +5,7 @@ import anyio
 from aws_request_signer import AwsRequestSigner
 import httpx
 import handtruck
+import scr
 
 from . import Backend
 
@@ -22,20 +23,19 @@ SIGNER_ENV_MAP = {
 class TeahouseCredentials(
     handtruck.credentials.AbstractCredentials, anyio.AsyncContextManagerMixin
 ):
-    taskgroup: anyio.TaskGroup
+    taskgroup: anyio.abc.TaskGroup
     bucket: str
     endpoint: str | httpx.URL
 
-    def __init__(self, domain: str):
+    def __init__(self, scr: scr.Container, domain: str):
+        self._scr = scr
         self.domain = domain
-        self._client = (
-            httpx.AsyncClient()
-        )  # FIXME: Use global client that does API credentials
         self.refresh_lock: anyio.Lock = anyio.Lock()
         self._signer: AwsRequestSigner | None = None
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self):
+        self._client = await self._scr.aget(httpx.AsyncClient)
         async with anyio.create_task_group() as self.taskgroup:
             await self.taskgroup.start(
                 self._refresher, name="TeahouseCredentials-refresher"
@@ -66,6 +66,8 @@ class TeahouseCredentials(
                     )
                     self.endpoint = envvars.get("AWS_ENDPOINT_URL_S3", None)
                     self.bucket = envvars.get("BUCKET_NAME", None)
+                else:
+                    resp.raise_for_status()
                 task_status.started()
                 sleep_time = 3600
             await anyio.sleep(sleep_time)
@@ -85,17 +87,20 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self):
-        async with httpx.AsyncClient() as self._http:
+        self.exitstack = contextlib.AsyncExitStack()
+        async with self.exitstack, httpx.AsyncClient() as self._http:
             yield self
 
-    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, httpx.URL]:
-        creds = TeahouseCredentials(url.host)
+    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
+        creds = await self.exitstack.enter_async_context(
+            TeahouseCredentials(self.scr, url.host)
+        )
         client = handtruck.S3Client(
             url=creds.endpoint, client=self._http, credentials=creds
         )
-        return client, httpx.URL(url, host=creds.bucket, scheme="s3")
+        return client, str(httpx.URL(url, host=creds.bucket, scheme="s3"))
 
-    async def is_file(self, url: httpx.URL):
+    async def is_file(self, url: httpx.URL) -> bool:
         assert url.scheme == "tea"
         client, s3url = await self._munge_url(url)
         resp = await client.head(s3url)
@@ -105,3 +110,4 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             return False
         else:
             resp.raise_for_status()
+            raise RuntimeError("Unhandled status")

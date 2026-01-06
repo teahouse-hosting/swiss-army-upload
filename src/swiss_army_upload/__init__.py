@@ -9,6 +9,7 @@ import httpx
 import scr
 
 from .backends import get_backend, UnknownURLError
+from . import deps  # noqa
 
 
 @dataclass
@@ -57,18 +58,18 @@ async def do_config(args: ConfigCmd):
 
 async def do_get(args: GetCmd):
     print(f"get {args!r}")
-    backend = get_backend(args.src)
+    backend = get_backend(args, args.src)
     print(f"\t{backend=}")
     async with backend:
         if await backend.is_file(args.src):
-            backend.get_to_file(args.src, args.dest)
+            await backend.get_to_file(args.src, args.dest)
         else:
             raise NotImplementedError
 
 
 async def do_put(args: PutCmd):
     print(f"put {args!r}")
-    backend = get_backend(args.dest)
+    backend = get_backend(args, args.dest)
     print(f"\t{backend=}")
     ...
 

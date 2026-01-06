@@ -37,6 +37,12 @@ neko = "swiss_army_upload.backends.nekoweb"
 # Neocities, https://neocities.org/
 neo = "swiss_army_upload.backends.neocities"
 
+[tool.mypy]
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["aws_request_signer.*"]
+follow_untyped_imports = true
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

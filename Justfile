@@ -19,7 +19,7 @@ run *ARGS:
 
 # Run type checks
 types:
-  poetry run mypy
+  poetry run mypy src tests
 
 # Build packages
 build: _changelog
