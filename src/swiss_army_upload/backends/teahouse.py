@@ -69,6 +69,7 @@ class TeahouseCredentials(
                     self.bucket = envvars.get("BUCKET_NAME", None)
                 else:
                     resp.raise_for_status()
+                    raise RuntimeError("Unhandled status")
                 task_status.started()
                 sleep_time = 3600
             await anyio.sleep(sleep_time)
@@ -89,7 +90,7 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self):
         self.exitstack = contextlib.AsyncExitStack()
-        async with self.exitstack, httpx.AsyncClient() as self._http:
+        async with self.exitstack, httpx.AsyncClient(http2=True) as self._http:
             yield self
 
     async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:

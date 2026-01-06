@@ -1,6 +1,6 @@
 import abc
 import importlib.metadata
-import pathlib
+import os
 import typing
 
 import httpx
@@ -26,7 +26,7 @@ class Backend(abc.ABC):
     async def is_file(self, url: httpx.URL) -> bool: ...
 
     @abc.abstractmethod
-    async def get_to_file(self, url: httpx.URL, file: pathlib.Path | str): ...
+    async def get_to_file(self, url: httpx.URL, file: os.PathLike | str): ...
 
 
 class UnknownURLError(ValueError):

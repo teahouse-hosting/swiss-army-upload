@@ -6,7 +6,10 @@ import contextlib
 import dataclasses
 
 import httpx
+import platformdirs
 import scr
+
+from .junk_drawer.cookiejar import SecureSavedJar
 
 SCR_ATTR = "__scr_container"
 
@@ -19,16 +22,29 @@ def _(ctx: object):
     return getattr(ctx, SCR_ATTR)
 
 
+def get_appdirs() -> platformdirs.PlatformDirs:
+    return platformdirs.PlatformDirs()
+
+
+scr.registry.register_factory(platformdirs.PlatformDirs, get_appdirs, enter=True)
+
+
+@contextlib.asynccontextmanager
+async def build_client(svcs_container):
+    platdirs = await svcs_container.aget(platformdirs.PlatformDirs)
+    async with (
+        SecureSavedJar(platdirs.user_cache_dir + "/cookies.blob") as jar,
+        httpx.AsyncClient(http2=True, cookies=jar) as client,
+    ):
+        yield client
+
+
+scr.registry.register_factory(httpx.AsyncClient, build_client, enter=True)
+
+
 @contextlib.asynccontextmanager
 async def enter_container(*objects) -> scr.Container:
     async with scr.root.afork() as ctr:
         for obj in objects:
             setattr(obj, SCR_ATTR, ctr)
         yield ctr
-
-
-async def build_client(svcs_container):
-    return httpx.AsyncClient()
-
-
-scr.registry.register_factory(httpx.AsyncClient, build_client, enter=True)
