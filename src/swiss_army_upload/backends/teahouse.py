@@ -1,5 +1,6 @@
 import contextlib
 from http import HTTPStatus
+import pathlib
 
 import anyio
 from aws_request_signer import AwsRequestSigner
@@ -111,3 +112,6 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
         else:
             resp.raise_for_status()
             raise RuntimeError("Unhandled status")
+
+    async def get_to_file(self, url: httpx.URL, file: pathlib.Path | str):
+        raise NotImplementedError

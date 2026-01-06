@@ -9,7 +9,7 @@ import httpx
 import scr
 
 from .backends import get_backend, UnknownURLError
-from . import deps  # noqa
+from .deps import enter_container
 
 
 @dataclass
@@ -80,11 +80,14 @@ async def main():
 
         try:
             if args.config is not None:
-                await do_config(args.config)
+                async with enter_container(args, args.config):
+                    await do_config(args.config)
             elif args.get is not None:
-                await do_get(args.get)
+                async with enter_container(args, args.get):
+                    await do_get(args.get)
             elif args.put is not None:
-                await do_put(args.put)
+                async with enter_container(args, args.put):
+                    await do_put(args.put)
             else:
                 # FIXME: Print usage
                 sys.exit("No command specified")
