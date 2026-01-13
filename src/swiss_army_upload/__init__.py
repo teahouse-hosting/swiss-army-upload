@@ -63,6 +63,20 @@ async def do_login(args: LoginCmd):
         assert not args.url.host
         args.url = httpx.URL(scheme=args.url.path)
     LOG.debug("login %r", args)
+    backend = get_backend(args, args.url)
+    LOG.debug("\tbackend=%r", backend)
+
+    async with backend:
+        # Check if credentials exist, and warn if they do
+        try:
+            have_creds_already = await backend.check_credentials(args.url)
+        except* NoCredentialsFound:
+            pass
+        else:
+            if have_creds_already:
+                LOG.warning("Already have credentials for %s; overwriting", args.url)
+
+        await backend.prompt_for_credentials(args.url)
 
 
 async def do_get(args: GetCmd):
@@ -110,6 +124,8 @@ async def main():
             for ncf in egrp.exceptions:
                 LOG.error("%s\nDid you need to use the login command?", ncf.args[0])
             del ncf
+            retval = 1
+        except* KeyboardInterrupt:
             retval = 1
         sys.exit(retval)
 

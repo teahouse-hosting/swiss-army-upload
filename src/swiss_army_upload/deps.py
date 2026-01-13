@@ -4,6 +4,7 @@ saucer/svcs definitions
 
 import contextlib
 import dataclasses
+import http.cookiejar
 import logging
 import typing as T
 
@@ -46,15 +47,24 @@ scr.registry.register_factory(platformdirs.PlatformDirs, get_appdirs, enter=True
 
 
 @contextlib.asynccontextmanager
-async def build_client(svcs_container):
+async def get_jar(svcs_container):
     platdirs = await svcs_container.aget(platformdirs.PlatformDirs)
+    async with SecureSavedJar(platdirs.user_cache_dir + "/cookies.blob") as jar:
+        yield jar
+
+
+scr.registry.register_factory(http.cookiejar.CookieJar, get_jar, enter=True)
+
+
+@contextlib.asynccontextmanager
+async def build_client(svcs_container):
+    jar = await svcs_container.aget(http.cookiejar.CookieJar)
     async with (
-        SecureSavedJar(platdirs.user_cache_dir + "/cookies.blob") as jar,
         httpx.AsyncClient(
             http2=True,
             cookies=jar,
             headers={"User-Agent": "swiss-army-upload/0.0.0"},
-            follow_redirects=True,
+            follow_redirects=False,  # This causes complications in implementing auth code
         ) as client,
     ):
         yield client

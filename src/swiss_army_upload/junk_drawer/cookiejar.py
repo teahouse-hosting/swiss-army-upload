@@ -1,9 +1,13 @@
 from contextlib import asynccontextmanager
 import http.cookiejar
+import logging
 import os
 import typing
 
 import anyio
+
+
+LOG = logging.getLogger(__name__)
 
 
 class SecureSavedJar(http.cookiejar.CookieJar, anyio.AsyncContextManagerMixin):
