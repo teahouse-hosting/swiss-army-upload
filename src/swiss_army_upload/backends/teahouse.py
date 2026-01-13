@@ -140,6 +140,7 @@ class TeahouseCredentials(
                 self._refresher, name="TeahouseCredentials-refresher"
             )
             yield self
+            self.taskgroup.cancel_scope.cancel()
 
     def __bool__(self) -> bool:
         return self._signer is not None
