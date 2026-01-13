@@ -19,6 +19,7 @@ dependencies = [
     # "onepassword-keyring (>=0.1.1,<0.2.0)",
     "saucer @ git+https://github.com/AstraLuma/svcs.git@saucer",
     "platformdirs (>=4.5.1,<5.0.0)",
+    "rich (>=14.2.0,<15.0.0)",
 ]
 
 [project.scripts]

@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import logging
+import logging.config
 from pathlib import Path
 import sys
 import typing as T
@@ -6,10 +8,14 @@ import typing as T
 import anyio
 import dykes
 import httpx
+import rich.logging
 import scr
 
 from .backends import get_backend, UnknownURLError, NoCredentialsFound
 from .deps import enter_container
+
+
+LOG = logging.getLogger(__name__)
 
 
 @dataclass
@@ -56,13 +62,13 @@ async def do_login(args: LoginCmd):
     if not args.url.scheme:
         assert not args.url.host
         args.url = httpx.URL(scheme=args.url.path)
-    print(f"login {args!r}")
+    LOG.debug("login %r", args)
 
 
 async def do_get(args: GetCmd):
-    print(f"get {args!r}")
+    LOG.debug("get %r", args)
     backend = get_backend(args, args.src)
-    print(f"\t{backend=}")
+    LOG.debug("\tbackend=%r", backend)
     async with backend:
         if await backend.is_file(args.src):
             await backend.get_to_file(args.src, args.dest)
@@ -71,9 +77,9 @@ async def do_get(args: GetCmd):
 
 
 async def do_put(args: PutCmd):
-    print(f"put {args!r}")
+    LOG.debug("get %r", args)
     backend = get_backend(args, args.dest)
-    print(f"\t{backend=}")
+    LOG.debug("\tbackend=%r", backend)
     ...
 
 
@@ -97,17 +103,47 @@ async def main():
                 sys.exit("No command specified")
         except* UnknownURLError as egrp:
             for uue in egrp.exceptions:
-                print(str(uue.args[0]), file=sys.stderr)
+                LOG.error("%s", str(uue.args[0]))
             del uue
             retval = 1
         except* NoCredentialsFound as egrp:
             for ncf in egrp.exceptions:
-                print(str(ncf.args[0]), file=sys.stderr)
+                LOG.error("%s\nDid you need to use the login command?", ncf.args[0])
             del ncf
-            print("Did you need to use the login command?")
             retval = 1
         sys.exit(retval)
 
 
 def entrypoint():
+    logging.config.dictConfig(
+        {
+            "version": 1,
+            "incremental": False,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "standard": {"format": "%(message)s"},
+            },
+            "handlers": {
+                "default": {
+                    "level": "NOTSET",
+                    "formatter": "standard",
+                    "class": "rich.logging.RichHandler",
+                    "rich_tracebacks": True,  # TODO: Only in development
+                    "console": rich.console.Console(stderr=True),
+                },
+            },
+            "root": {"handlers": ["default"], "level": "INFO", "propagate": True},
+            "loggers": {
+                __name__: {
+                    "handlers": ["default"],
+                    "level": "DEBUG",
+                    "propagate": False,
+                },
+                "httpx": {
+                    # INFO spews all requests
+                    "level": "WARNING",
+                },
+            },
+        }
+    )
     anyio.run(main, backend="trio")

@@ -4,14 +4,19 @@ saucer/svcs definitions
 
 import contextlib
 import dataclasses
+import logging
 import typing as T
 
 import httpx
 import platformdirs
+import rich.console
 import scr
 
 from .junk_drawer.cookiejar import SecureSavedJar
 from .junk_drawer import keyring
+
+
+LOG = logging.getLogger(__name__)
 
 SCR_ATTR = "__scr_container"
 
@@ -66,19 +71,24 @@ async def get_keyring() -> keyring.AsyncKeyring:
         raise RuntimeError("Unable to find viable credentials keyring")
     elif len(keyrings) == 1:
         ring, _ = keyrings[0]
-        print(f"Using keyring {ring}")
+        LOG.info("Using keyring %s", ring)
         return ring
     else:
         # More than one ring
         # TODO: chain them together
         ring, _ = keyrings[0]
-        print(
-            f"Using keyring {ring} (also {', '.join(str(r) for r, _ in keyrings[1:])})"
+        LOG.info(
+            "Using keyring %s (also %s)",
+            ring,
+            ", ".join(str(r) for r, _ in keyrings[1:]),
         )
         return ring
 
 
 scr.registry.register_factory(keyring.AsyncKeyring, get_keyring, enter=False)
+
+
+scr.registry.register_factory(rich.console.Console, rich.console.Console, enter=False)
 
 
 @contextlib.asynccontextmanager
