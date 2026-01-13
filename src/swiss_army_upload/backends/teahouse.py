@@ -1,6 +1,6 @@
 import contextlib
 from http import HTTPStatus
-import pathlib
+import os
 
 import anyio
 from aws_request_signer import AwsRequestSigner
@@ -55,8 +55,8 @@ class TeahouseAuth(httpx.Auth):
             else:
                 # No token, do user/pass auth with cookies
                 # (Cookies are implicitly saved by the global client)
-                # FIXME: Allow site-specific credentials
-                keyring = await self.scr.aget(AsyncKeyring)
+                # TODO: Allow site-specific credentials
+                keyring: AsyncKeyring = await self.scr.aget(AsyncKeyring)  # type: ignore
                 cred = await keyring.get_credential("counter.teahouse.cafe", None)
                 if cred is not None:
                     resp = yield httpx.Request(
@@ -184,5 +184,5 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             resp.raise_for_status()
             raise RuntimeError("Unhandled status")
 
-    async def get_to_file(self, url: httpx.URL, file: pathlib.Path | str):
+    async def get_to_file(self, url: httpx.URL, file: os.PathLike | str):
         raise NotImplementedError

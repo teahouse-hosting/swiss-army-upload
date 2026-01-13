@@ -18,7 +18,7 @@ class SecureSavedJar(http.cookiejar.CookieJar, anyio.AsyncContextManagerMixin):
     def __init__(
         self,
         filename: os.PathLike | str,
-        policy: http.cookierjar.CookiePolicy | None = None,
+        policy: http.cookiejar.CookiePolicy | None = None,
     ):
         super().__init__(policy)
 

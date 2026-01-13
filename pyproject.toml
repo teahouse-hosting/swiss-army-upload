@@ -47,6 +47,10 @@ check_untyped_defs = true
 module = ["aws_request_signer.*"]
 follow_untyped_imports = true
 
+[[tool.mypy.overrides]]
+module = ["keyrings.*"]
+follow_untyped_imports = true
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

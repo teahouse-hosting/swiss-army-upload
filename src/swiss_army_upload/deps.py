@@ -4,6 +4,7 @@ saucer/svcs definitions
 
 import contextlib
 import dataclasses
+import typing as T
 
 import httpx
 import platformdirs
@@ -81,7 +82,7 @@ scr.registry.register_factory(keyring.AsyncKeyring, get_keyring, enter=False)
 
 
 @contextlib.asynccontextmanager
-async def enter_container(*objects) -> scr.Container:
+async def enter_container(*objects) -> T.AsyncIterator[scr.Container]:
     async with scr.root.afork() as ctr:
         for obj in objects:
             setattr(obj, SCR_ATTR, ctr)

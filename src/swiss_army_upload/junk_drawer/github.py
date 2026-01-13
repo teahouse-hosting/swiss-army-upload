@@ -38,7 +38,7 @@ def github_oidc(
                 "Accept": "application/json",
             },
         )
-        resp.raise_for_error()
+        resp.raise_for_status()
         body = resp.json()
         return body["value"]
 

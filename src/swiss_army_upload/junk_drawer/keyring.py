@@ -88,7 +88,7 @@ class WrapperKeyring(AsyncKeyring):
         return await to_thread.run_sync(self.wrappee.get_credential, service, username)
 
     @classmethod
-    def from_sync(cls, sync: keyring.backend.KeyringBackend) -> type[T.Self]:
+    def from_sync(cls, sync: type[keyring.backend.KeyringBackend]) -> type[T.Self]:
         def pop(ns: dict):
             ns["wrap_class"] = sync
 
@@ -105,15 +105,23 @@ async def get_viable_backends() -> list[type[AsyncKeyring]]:
     )
 
     # These aren't useful here (either because args or we want things to fall through)
-    sync_classes.remove(keyring.backends.chainer.ChainerBackend)
-    # sync_classes.remove(keyring.backends.null.Keyring)
-    sync_classes.remove(keyring.backends.fail.Keyring)
-    sync_classes.remove(keyrings.alt.multi.MultipartKeyringWrapper)
+    # (If the attr isn't there, the module isn't loaded and the class can't be here)
+    if hasattr(keyring.backends, "chainer"):
+        sync_classes.remove(keyring.backends.chainer.ChainerBackend)
+    if hasattr(keyring.backends, "null"):
+        sync_classes.remove(keyring.backends.null.Keyring)
+    if hasattr(keyring.backends, "fail"):
+        sync_classes.remove(keyring.backends.fail.Keyring)
+    if hasattr(keyrings.alt, "multi"):
+        sync_classes.remove(keyrings.alt.multi.MultipartKeyringWrapper)
 
     # This is insecure and shouldn't be allowed
-    sync_classes.remove(keyrings.alt.file.PlaintextKeyring)
+    if hasattr(keyrings.alt, "file"):
+        sync_classes.remove(keyrings.alt.file.PlaintextKeyring)
 
-    wrappers = [WrapperKeyring.from_sync(cls) for cls in sync_classes]
+    wrappers: list[type[AsyncKeyring]] = [
+        WrapperKeyring.from_sync(cls) for cls in sync_classes
+    ]
 
     # TODO: Async-native backends
 

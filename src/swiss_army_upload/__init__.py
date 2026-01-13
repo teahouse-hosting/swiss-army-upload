@@ -93,12 +93,14 @@ async def main():
                 # FIXME: Print usage
                 sys.exit("No command specified")
         except* UnknownURLError as egrp:
-            for exc in egrp.exceptions:
-                print(str(exc.args[0]), file=sys.stderr)
+            for uue in egrp.exceptions:
+                print(str(uue.args[0]), file=sys.stderr)
+            del uue
             retval = 1
         except* NoCredentialsFound as egrp:
-            for exc in egrp.exceptions:
-                print(str(exc.args[0]), file=sys.stderr)
+            for ncf in egrp.exceptions:
+                print(str(ncf.args[0]), file=sys.stderr)
+            del ncf
             retval = 1
         sys.exit(retval)
 
