@@ -87,7 +87,7 @@ async def do_get(args: GetCmd):
         if await backend.is_file(args.src):
             await backend.get_to_file(args.src, args.dest)
         else:
-            raise NotImplementedError
+            LOG.error("Not a file: %s", args.src)
 
 
 async def do_put(args: PutCmd):

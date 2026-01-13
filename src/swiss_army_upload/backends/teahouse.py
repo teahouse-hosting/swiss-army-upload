@@ -250,7 +250,7 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             TeahouseCredentials(self.scr, url.host)
         )
         client = handtruck.S3Client(url=creds.endpoint, client=http, credentials=creds)
-        return client, str(httpx.URL(url, host=creds.bucket, scheme="s3"))
+        return client, str(httpx.URL(url, host=creds.bucket, scheme="https"))
 
     async def is_file(self, url: httpx.URL) -> bool:
         assert url.scheme == "tea"
