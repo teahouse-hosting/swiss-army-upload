@@ -8,7 +8,7 @@ import dykes
 import httpx
 import scr
 
-from .backends import get_backend, UnknownURLError
+from .backends import get_backend, UnknownURLError, NoCredentialsFound
 from .deps import enter_container
 
 
@@ -78,6 +78,7 @@ async def main():
     async with scr.ainit():
         args = dykes.parse_args(SAUArgs)
 
+        retval = 0
         try:
             if args.config is not None:
                 async with enter_container(args, args.config):
@@ -91,8 +92,15 @@ async def main():
             else:
                 # FIXME: Print usage
                 sys.exit("No command specified")
-        except UnknownURLError as exc:
-            sys.exit(str(exc.args[0]))
+        except* UnknownURLError as egrp:
+            for exc in egrp.exceptions:
+                print(str(exc.args[0]), file=sys.stderr)
+            retval = 1
+        except* NoCredentialsFound as egrp:
+            for exc in egrp.exceptions:
+                print(str(exc.args[0]), file=sys.stderr)
+            retval = 1
+        sys.exit(retval)
 
 
 def entrypoint():

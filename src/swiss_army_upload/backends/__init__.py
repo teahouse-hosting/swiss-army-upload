@@ -20,6 +20,12 @@ class UnknownSite(Exception):
     """
 
 
+class NoCredentialsFound(Exception):
+    """
+    Unable to find the appropriate credentials
+    """
+
+
 class Backend(abc.ABC):
     hinted_base: httpx.URL
     scr: scr.Container

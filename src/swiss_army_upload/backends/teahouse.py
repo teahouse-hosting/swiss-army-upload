@@ -8,8 +8,10 @@ import httpx
 import handtruck
 import scr
 
-from . import Backend, InvalidCredentials, UnknownSite
-from ..junk_drawer.github import github_oidc
+from . import Backend, InvalidCredentials, UnknownSite, NoCredentialsFound
+
+# from ..junk_drawer.github import github_oidc
+from ..junk_drawer.keyring import AsyncKeyring
 
 
 SIGNER_ENV_MAP = {
@@ -27,10 +29,10 @@ class TeahouseAuth(httpx.Auth):
 
     requires_response_body = True
 
-    def __init__(self, saucer):
+    def __init__(self, saucer: scr.Container):
         self.scr = saucer
 
-    def auth_flow(self, request):
+    async def async_auth_flow(self, request):
         # If we've stashed a token, reuse that
         if self.token is not None:
             request.headers["Authorization"] = f"Bearer {self.token}"
@@ -41,7 +43,8 @@ class TeahouseAuth(httpx.Auth):
         # Teahouse needs us to auth
         if resp.status_code == 403:
             # Check if we're in github and there's an OIDC token
-            oidc = yield from github_oidc()
+            # FIXME: Reimplement github_oidc() in an async-friendly way
+            oidc = None  # yield from github_oidc()
             if oidc is not None:
                 # There is an OIDC token, use that and stash it for later.
                 # We don't need to cache this because the actions environment is
@@ -52,22 +55,30 @@ class TeahouseAuth(httpx.Auth):
             else:
                 # No token, do user/pass auth with cookies
                 # (Cookies are implicitly saved by the global client)
-                resp = yield httpx.Request(
-                    "POST",
-                    "https://counter.teahouse.cafe/auth/login/",
-                    json={"email": "...", "password": "..."},
-                    headers={"Accept": "application/json"},
-                )
-                try:
-                    resp.raise_for_status()
-                except httpx.HTTPStatusError as exc:
-                    if exc.response.status_code == 400:
-                        raise InvalidCredentials(
-                            "Invalid credentials for ... at Teahouse"
-                        ) from exc
-                    else:
-                        raise exc
-                yield request
+                # FIXME: Allow site-specific credentials
+                keyring = await self.scr.aget(AsyncKeyring)
+                cred = await keyring.get_credential("counter.teahouse.cafe", None)
+                if cred is not None:
+                    resp = yield httpx.Request(
+                        "POST",
+                        "https://counter.teahouse.cafe/auth/login/",
+                        json={"email": cred.username, "password": cred.password},
+                        headers={"Accept": "application/json"},
+                    )
+                    try:
+                        resp.raise_for_status()
+                    except httpx.HTTPStatusError as exc:
+                        if exc.response.status_code == 400:
+                            raise InvalidCredentials(
+                                "Invalid credentials for ... at Teahouse"
+                            ) from exc
+                        else:
+                            raise exc
+                    yield request
+                else:
+                    raise NoCredentialsFound(
+                        "Could not find credentials for counter.teahouse.cafe"
+                    )
 
 
 class TeahouseCredentials(

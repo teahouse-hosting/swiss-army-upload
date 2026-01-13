@@ -10,6 +10,7 @@ import platformdirs
 import scr
 
 from .junk_drawer.cookiejar import SecureSavedJar
+from .junk_drawer import keyring
 
 SCR_ATTR = "__scr_container"
 
@@ -54,6 +55,29 @@ async def build_client(svcs_container):
 
 
 scr.registry.register_factory(httpx.AsyncClient, build_client, enter=True)
+
+
+async def get_keyring() -> keyring.AsyncKeyring:
+    classes = await keyring.get_viable_backends()
+    keyrings = [((kr := cls()), await kr.priority()) for cls in classes]
+    keyrings.sort(key=lambda t: -t[1])
+    if len(keyrings) == 0:
+        raise RuntimeError("Unable to find viable credentials keyring")
+    elif len(keyrings) == 1:
+        ring, _ = keyrings[0]
+        print(f"Using keyring {ring}")
+        return ring
+    else:
+        # More than one ring
+        # TODO: chain them together
+        ring, _ = keyrings[0]
+        print(
+            f"Using keyring {ring} (also {', '.join(str(r) for r, _ in keyrings[1:])})"
+        )
+        return ring
+
+
+scr.registry.register_factory(keyring.AsyncKeyring, get_keyring, enter=False)
 
 
 @contextlib.asynccontextmanager
