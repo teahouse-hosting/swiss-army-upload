@@ -13,12 +13,12 @@ from .deps import enter_container
 
 
 @dataclass
-class ConfigCmd:
+class LoginCmd:
     """
-    Configure Swiss Army Upload
+    Log in to a backend
     """
 
-    ...
+    url: T.Annotated[httpx.URL, "URL to log in to"]
 
 
 @dataclass
@@ -47,13 +47,16 @@ class SAUArgs:
     Upload to a variety of web hosts
     """
 
-    config: dykes.Subparser[ConfigCmd] = None
+    login: dykes.Subparser[LoginCmd] = None
     get: dykes.Subparser[GetCmd] = None
     put: dykes.Subparser[PutCmd] = None
 
 
-async def do_config(args: ConfigCmd):
-    print(f"config {args!r}")
+async def do_login(args: LoginCmd):
+    if not args.url.scheme:
+        assert not args.url.host
+        args.url = httpx.URL(scheme=args.url.path)
+    print(f"login {args!r}")
 
 
 async def do_get(args: GetCmd):
@@ -80,9 +83,9 @@ async def main():
 
         retval = 0
         try:
-            if args.config is not None:
-                async with enter_container(args, args.config):
-                    await do_config(args.config)
+            if args.login is not None:
+                async with enter_container(args, args.login):
+                    await do_login(args.login)
             elif args.get is not None:
                 async with enter_container(args, args.get):
                     await do_get(args.get)
@@ -101,6 +104,7 @@ async def main():
             for ncf in egrp.exceptions:
                 print(str(ncf.args[0]), file=sys.stderr)
             del ncf
+            print("Did you need to use the login command?")
             retval = 1
         sys.exit(retval)
 
