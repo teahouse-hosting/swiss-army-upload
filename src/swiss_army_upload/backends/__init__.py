@@ -52,6 +52,9 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     async def get_to_file(self, url: httpx.URL, file: os.PathLike | str): ...
 
+    @abc.abstractmethod
+    async def put_from_file(self, file: os.PathLike | str, url: httpx.URL): ...
+
 
 class UnknownURLError(ValueError):
     pass

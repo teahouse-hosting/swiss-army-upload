@@ -62,11 +62,8 @@ async def do_login(args: LoginCmd):
     if not args.url.scheme:
         assert not args.url.host
         args.url = httpx.URL(scheme=args.url.path)
-    LOG.debug("login %r", args)
-    backend = get_backend(args, args.url)
-    LOG.debug("\tbackend=%r", backend)
 
-    async with backend:
+    async with get_backend(args, args.url) as backend:
         # Check if credentials exist, and warn if they do
         try:
             have_creds_already = await backend.check_credentials(args.url)
@@ -80,8 +77,7 @@ async def do_login(args: LoginCmd):
 
 
 async def do_get(args: GetCmd):
-    backend = get_backend(args, args.src)
-    async with backend:
+    async with get_backend(args, args.src) as backend:
         if await backend.is_file(args.src):
             await backend.get_to_file(args.src, args.dest)
         else:
@@ -89,10 +85,8 @@ async def do_get(args: GetCmd):
 
 
 async def do_put(args: PutCmd):
-    LOG.debug("get %r", args)
-    backend = get_backend(args, args.dest)
-    LOG.debug("\tbackend=%r", backend)
-    ...
+    async with get_backend(args, args.dest) as backend:
+        await backend.put_from_file(args.src, args.dest)
 
 
 async def main():

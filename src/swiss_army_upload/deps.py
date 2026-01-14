@@ -81,7 +81,7 @@ async def get_keyring() -> keyring.AsyncKeyring:
         raise RuntimeError("Unable to find viable credentials keyring")
     elif len(keyrings) == 1:
         ring, _ = keyrings[0]
-        LOG.info("Using keyring %s", ring)
+        LOG.info("Using keyring %s", ring.name)
         return ring
     else:
         # More than one ring
