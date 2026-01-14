@@ -267,4 +267,4 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
 
     async def get_to_file(self, url: httpx.URL, file: os.PathLike | str):
         client, s3url = await self._munge_url(url)
-        await client.get_file_parallel(s3url, file)
+        await client.get_file_parallel(s3url, os.fspath(file))
