@@ -10,7 +10,7 @@ requires-python = ">=3.14,<4.0"
 dependencies = [
     "anyio[trio] (>=4.12.0,<5.0.0)",
     "httpx[http2] (>=0.28.1,<0.29.0)",
-    "handtruck @ git+https://codeberg.org/teahouse/handtruck.git",
+    "handtruck (<0.2.0)",
     "dykes @ git+https://github.com/AstraLuma/dykes.git@subcommands",
     "keyring (>=25.7.0,<26.0.0)",
     # Doesn't implement get_credential(), so useless to us

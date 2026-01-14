@@ -294,25 +294,21 @@ hyperframe = ">=6.1,<7"
 
 [[package]]
 name = "handtruck"
-version = "0.0.1"
+version = "0.1.0"
 description = "Async S3 client using httpx & anyio"
 optional = false
-python-versions = "^3.11"
+python-versions = "<4.0,>=3.11"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "handtruck-0.1.0-py3-none-any.whl", hash = "sha256:17d688a557cf1a1b8edf62fee789f44eec7427f46ae45b558aaf548b4c8249d0"},
+    {file = "handtruck-0.1.0.tar.gz", hash = "sha256:84384adaa313df52955fbfec8afb806cc2747c91b9bc3e6a21b229dc65d52ed7"},
+]
 
 [package.dependencies]
 anyio = ">=3.7.1"
 aws-request-signer = "1.2.0"
 httpcore = {version = ">=1.0.8", markers = "python_version >= \"3.14\""}
 httpx = ">=0.28.1"
-
-[package.source]
-type = "git"
-url = "https://codeberg.org/teahouse/handtruck.git"
-reference = "HEAD"
-resolved_reference = "a1526ff0edbe89b914d71b4191ed6b584656339d"
 
 [[package]]
 name = "hpack"
@@ -1004,4 +1000,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.14,<4.0"
-content-hash = "fd5fb43e61ff867a7b5543d89ba881344aee483b6ed43dbda28e01ecf93d15f8"
+content-hash = "ba6c6a9623eb32ef008d5bac17cb1c6c8f7579954403d61bfe93ddbbcabac16b"
