@@ -80,9 +80,7 @@ async def do_login(args: LoginCmd):
 
 
 async def do_get(args: GetCmd):
-    LOG.debug("get %r", args)
     backend = get_backend(args, args.src)
-    LOG.debug("\tbackend=%r", backend)
     async with backend:
         if await backend.is_file(args.src):
             await backend.get_to_file(args.src, args.dest)

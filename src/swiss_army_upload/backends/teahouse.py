@@ -251,7 +251,7 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             TeahouseCredentials(self.scr, url.host)
         )
         client = handtruck.S3Client(url=creds.endpoint, client=http, credentials=creds)
-        return client, str(httpx.URL(url, host=creds.bucket, scheme="https"))
+        return client, f"{creds.bucket}/{url.path}"
 
     async def is_file(self, url: httpx.URL) -> bool:
         assert url.scheme == "tea"
@@ -266,4 +266,5 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             raise RuntimeError("Unhandled status")
 
     async def get_to_file(self, url: httpx.URL, file: os.PathLike | str):
-        raise NotImplementedError
+        client, s3url = await self._munge_url(url)
+        await client.get_file_parallel(s3url, file)
