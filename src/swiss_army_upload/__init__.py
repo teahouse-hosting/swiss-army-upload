@@ -21,7 +21,14 @@ LOG = logging.getLogger(__name__)
 @dataclass
 class LoginCmd:
     """
-    Log in to a backend
+    Log in to a provider.
+
+    Any of the following forms are allowed:
+    * Just a name (tea)
+    * A URL stub (tea:, tea://)
+    * A URL base (tea://mysite.example)
+
+    Note that support for multiple credentials to the same provider will vary.
     """
 
     url: T.Annotated[httpx.URL, "URL to log in to"]
@@ -30,7 +37,9 @@ class LoginCmd:
 @dataclass
 class GetCmd:
     """
-    Download one or more files
+    Download one or more files.
+
+    Both the source and the destination must include the file name.
     """
 
     src: T.Annotated[httpx.URL, "URL to read from"]
@@ -41,6 +50,8 @@ class GetCmd:
 class PutCmd:
     """
     Upload one or more files
+
+    Both the source and the destination must include the file name.
     """
 
     src: T.Annotated[Path, "Path to read from"]
