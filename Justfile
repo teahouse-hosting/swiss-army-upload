@@ -24,7 +24,7 @@ types:
 # Build packages
 build: _changelog
   poetry build
-  briefcase build
+  briefcase package
 
 # Generate changelog from forge releases
 _changelog:

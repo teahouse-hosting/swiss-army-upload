@@ -1,7 +1,7 @@
 [project]
 name = "swiss-army-upload"
 version = "0.1.0"
-description = ""
+description = "Interact with multiple web hosts"
 authors = [
     {name = "Jamie Bliss",email = "jamie@teahouse.cafe"}
 ]
@@ -22,6 +22,9 @@ dependencies = [
     "rich (>=14.2.0,<15.0.0)",
 ]
 
+[project.urls]
+source = "https://codeberg.org/teahouse/swiss-army-upload"
+
 [project.scripts]
 swiss-army-upload = 'swiss_army_upload:entrypoint'
 sau = 'swiss_army_upload:entrypoint'
@@ -35,11 +38,11 @@ packages = [
 # Teahouse Hosting, https://teahouse.cafe/
 tea = "swiss_army_upload.backends.teahouse:TeahouseBackend"
 # Git Pages, https://git-pages.org/
-page = "swiss_army_upload.backends.gitpages"
+# page = "swiss_army_upload.backends.gitpages"
 # Nekoweb, https://nekoweb.org/
-neko = "swiss_army_upload.backends.nekoweb"
+# neko = "swiss_army_upload.backends.nekoweb"
 # Neocities, https://neocities.org/
-neo = "swiss_army_upload.backends.neocities"
+# neo = "swiss_army_upload.backends.neocities"
 
 [tool.mypy]
 check_untyped_defs = true
@@ -71,8 +74,12 @@ author_email = "jamie@teahouse.cafe"
 
 [tool.briefcase.app.swiss-army-upload]
 formal_name = "Swiss Army Upload"
-description = ""
-long_description = """More details about the app should go here.
+description = "Interact with multiple web hosts"
+long_description = """Uploads/downloads files with multiple web hosts:
+* Teahouse Hosting
+* Git Pages (soon)
+* Neocities (soon)
+* Nekoweb (soon)
 """
 sources = [
     "src/swiss_army_upload",
