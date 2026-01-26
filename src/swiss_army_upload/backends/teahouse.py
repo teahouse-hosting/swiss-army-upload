@@ -98,7 +98,7 @@ class TeahouseAuth(httpx.Auth):
                     except httpx.HTTPStatusError as exc:
                         if exc.response.status_code == 400:
                             raise InvalidCredentials(
-                                "Invalid credentials for ... at Teahouse"
+                                f"Invalid credentials for {request.url.host} at Teahouse"
                             ) from exc
                         elif 300 <= exc.response.status_code < 400:
                             # Successful, actually

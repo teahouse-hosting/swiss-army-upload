@@ -9,7 +9,7 @@ import typing as T
 import anyio
 import httpx
 
-from . import Backend
+from . import Backend, InvalidCredentials
 from ..junk_drawer.sync import sync_to_async
 
 LOG = logging.getLogger(__name__)
@@ -120,4 +120,10 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
             },
             follow_redirects=True,
         )
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 401:
+                raise InvalidCredentials(
+                    f"Invalid credentials for {url.host} at Git Pages"
+                ) from exc
