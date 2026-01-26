@@ -27,7 +27,7 @@ class TFile:
     name: str
     source: os.PathLike | str
     # Skipping size, it'll be read in later
-    mtime: int
+    mtime: float
     # Skipping type, linkname, devmajor, devminor, not applicable
     # Skipping mode, uid, gid, uname, gname, don't need them here
 
