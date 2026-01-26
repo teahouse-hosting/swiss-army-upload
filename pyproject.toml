@@ -38,7 +38,7 @@ packages = [
 # Teahouse Hosting, https://teahouse.cafe/
 tea = "swiss_army_upload.backends.teahouse:TeahouseBackend"
 # Git Pages, https://git-pages.org/
-# page = "swiss_army_upload.backends.gitpages"
+pages = "swiss_army_upload.backends.gitpages:GitPagesBackend"
 # Nekoweb, https://nekoweb.org/
 # neko = "swiss_army_upload.backends.nekoweb"
 # Neocities, https://neocities.org/

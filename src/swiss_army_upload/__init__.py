@@ -89,10 +89,7 @@ async def do_login(args: LoginCmd):
 
 async def do_get(args: GetCmd):
     async with get_backend(args, args.src) as backend:
-        if await backend.is_file(args.src):
-            await backend.get_to_file(args.src, args.dest)
-        else:
-            LOG.error("Not a file: %s", args.src)
+        await backend.get_to_file(args.src, args.dest)
 
 
 async def do_put(args: PutCmd):
