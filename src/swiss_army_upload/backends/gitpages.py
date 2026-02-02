@@ -93,7 +93,9 @@ def bundle_into_tarfile(files: T.Iterable[TFile]) -> bytes:
                 with inode.open() as fsrc:
                     ftar.addfile(ti, fsrc)
         fbytes.seek(0)
-        return fbytes.read()
+        tardata = fbytes.read()
+        # open('debug.tar.zst', 'wb').write(tardata)
+        return tardata
 
 
 class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
@@ -117,6 +119,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
             httpx.URL(url, scheme="http"),
             auth=auth,
             follow_redirects=True,
+            **opts,
         )
         try:
             resp.raise_for_status()
@@ -140,6 +143,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
             httpx.URL(url, scheme="http"),
             auth=auth,
             follow_redirects=True,
+            **opts,
         ) as resp:
             try:
                 resp.raise_for_status()
@@ -169,7 +173,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
 
         return httpdate.httpdate_to_unixtime(resp.headers["Last-Modified"])
 
-    async def _get_manifest(self, domain: str):
+    async def _get_manifest(self, domain: str) -> tuple[int, dict]:
         last_updated = await self._get_status(domain)
         async with self._cache_dir(domain) as sitecache:
             manicache = sitecache / "manifest.json"
@@ -185,7 +189,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                     last_updated,
                     cache_updated,
                 )
-                return json.loads(await manicache.read_text())
+                return cache_updated, json.loads(await manicache.read_text())
             else:
                 LOG.debug(
                     "Download manifest from server (last_updated:%r > cache_updated:%r)",
@@ -199,9 +203,9 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                 lm = httpdate.httpdate_to_unixtime(resp.headers["Last-Modified"])
                 await manicache.write_text(resp.text)
                 await sync_to_async(os.utime)(manicache, (time.time(), lm))
-                return json.loads(resp.text)
+                return lm, json.loads(resp.text)
 
-    async def _download_site(self, domain: str):
+    async def _download_site(self, domain: str) -> tuple[int, object]:
         last_updated = await self._get_status(domain)
         async with self._cache_dir(domain) as sitecache:
             archcache = sitecache / "archive.tar"
@@ -290,7 +294,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
 
         await self._request(
             "PATCH",
-            httpx.URL(host=url.host, path="/.git-pages/health"),
+            httpx.URL(host=url.host, path="/"),
             headers={
                 "Content-Type": "application/x-tar+zstd",
                 "Create-Parents": "yes",
