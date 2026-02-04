@@ -1,6 +1,6 @@
 [project]
 name = "swiss-army-upload"
-version = "0.1.0"
+version = "0.2.0"
 description = "Interact with multiple web hosts"
 authors = [
     {name = "Jamie Bliss",email = "jamie@teahouse.cafe"}
