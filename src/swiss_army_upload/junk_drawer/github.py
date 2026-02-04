@@ -14,7 +14,7 @@ def github_oidc(
 
         token = yield from github_oidc()
 
-    and if $GITHUB_TOKEN is set, it'll do the thing.
+    and if the envvars are set, it'll do the thing.
 
     You must set `requires_response_body` on your httpx.Auth.
 
@@ -27,7 +27,7 @@ def github_oidc(
     """
     # https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
 
-    if "ACTIONS_ID_TOKEN_REQUEST_TOKEN" in os.environ:
+    if os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", None):
         resp = yield httpx.Request(
             "GET",
             os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"],
