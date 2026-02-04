@@ -106,10 +106,12 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
         yield self
 
     @contextlib.asynccontextmanager
-    async def _cache_dir(self, domain) -> T.AsyncIterable[anyio.Path]:
+    async def _cache_dir(self, project: str) -> T.AsyncGenerator[anyio.Path]:
         pdirs = await self.scr.aget(platformdirs.PlatformDirs)
         cachedir = anyio.Path(pdirs.user_cache_dir)
-        sitedir = cachedir / "gitpages" / domain
+        # FIXME: Handle non-root projects
+        assert "/" not in project
+        sitedir = cachedir / "gitpages" / project
         await sitedir.mkdir(parents=True, exist_ok=True)
         yield sitedir
 
@@ -155,13 +157,29 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                         f"Invalid credentials for {url.host} at Git Pages"
                     ) from exc
                 else:
-                    exc.add_note(f"Body: {await resp.aread()}")
+                    exc.add_note(f"Body: {await resp.aread()!s}")
                     raise
             else:
                 yield resp
 
+    async def _split(self, url: httpx.URL) -> tuple[str, str]:
+        """
+        Splits a pages:// URL into project and path components.
+        """
+        assert url.scheme == "pages"
+        return url.host, url.path.lstrip("/")
+
+    async def _url(self, project: str, **opts) -> httpx.URL:
+        """
+        Produce the API URL for the given project
+        """
+        # FIXME: Handle non-root projects
+        assert "/" not in project
+        # Yes, must be HTTP, due to site bootstrap concerns
+        return httpx.URL(scheme="http", host=project, **opts)
+
     # FIXME: Cache this on what policy?
-    async def _get_status(self, domain: str) -> int:
+    async def _get_status(self, project: str) -> int:
         """
         Query for the current manifest timestamp.
 
@@ -170,14 +188,15 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
         """
         resp = await self._request(
             "GET",
-            httpx.URL(host=domain, path="/.git-pages/health"),
+            # FIXME: Handle non-root projects
+            self._url(project, path="/.git-pages/health"),
         )
 
         return httpdate.httpdate_to_unixtime(resp.headers["Last-Modified"])
 
-    async def _get_manifest(self, domain: str) -> tuple[int, dict]:
-        last_updated = await self._get_status(domain)
-        async with self._cache_dir(domain) as sitecache:
+    async def _get_manifest(self, project: str) -> tuple[int | float, dict]:
+        last_updated = await self._get_status(project)
+        async with self._cache_dir(project) as sitecache:
             manicache = sitecache / "manifest.json"
             try:
                 cstat = await manicache.stat()
@@ -200,16 +219,16 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                 )
                 resp = await self._request(
                     "GET",
-                    httpx.URL(host=domain, path="/.git-pages/manifest.json"),
+                    self._url(project, path="/.git-pages/manifest.json"),
                 )
                 lm = httpdate.httpdate_to_unixtime(resp.headers["Last-Modified"])
                 await manicache.write_text(resp.text)
                 await sync_to_async(os.utime)(manicache, (time.time(), lm))
                 return lm, json.loads(resp.text)
 
-    async def _download_site(self, domain: str) -> tuple[int, object]:
-        last_updated = await self._get_status(domain)
-        async with self._cache_dir(domain) as sitecache:
+    async def _download_site(self, project: str) -> tuple[int | float, tarfile.TarFile]:
+        last_updated = await self._get_status(project)
+        async with self._cache_dir(project) as sitecache:
             archcache = sitecache / "archive.tar"
             try:
                 cstat = await archcache.stat()
@@ -234,24 +253,28 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                 # TODO: Investigate compression
                 async with self._stream(
                     "GET",
-                    httpx.URL(host=domain, path="/.git-pages/archive.tar"),
+                    self._url(project, path="/.git-pages/archive.tar"),
                     stream=True,
                 ) as resp:
                     lm = httpdate.httpdate_to_unixtime(resp.headers["Last-Modified"])
-                    async with archcache.open("wb") as fcache:
+                    async with await archcache.open("wb") as fcache:
                         async for chunk in resp.aiter_bytes():
                             await fcache.write(chunk)
                     raise NotImplementedError
                     lm, resp
 
     async def check_credentials(self, url: httpx.URL) -> bool:
-        assert url.scheme == "pages"
         if not url.host:
             LOG.critical("Git Pages does not support global credentials, only per-site")
             sys.exit(1)
 
+        project, path = await self._split(url)
+
+        if path:
+            LOG.warning("Path %r ignored", path)
+
         try:
-            await self._get_manifest(url.host)
+            await self._get_manifest(project)
         except InvalidCredentials:
             return False
         else:
@@ -261,10 +284,14 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
         console = await self.scr.aget(rich.console.Console)
         keyring: AsyncKeyring = await self.scr.aget(AsyncKeyring)  # type: ignore
 
-        assert url.scheme == "pages"
         if not url.host:
             LOG.critical("Git Pages does not support global credentials, only per-site")
             sys.exit(1)
+
+        project, path = await self._split(url)
+
+        if path:
+            LOG.warning("Path %r ignored", path)
 
         credentials_ok = False
         while not credentials_ok:
@@ -272,7 +299,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
             password = Prompt.ask("Git Pages Token", password=True, console=console)
 
             # FIXME: Try credentials before saving them
-            await keyring.set_password(url.host, "Pages", password)
+            await keyring.set_password(project, "Pages", password)
 
             credentials_ok = await self.check_credentials(url)
             if not credentials_ok:
@@ -286,17 +313,17 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
         raise NotImplementedError
 
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
-        assert url.scheme == "pages"
+        project, path = await self._split(url)
         http, auth = await self.scr.aget(httpx.AsyncClient, GitPagesAuth)
         data = await bundle_into_tarfile(
             [
-                await TFile.from_file(file, url.path),
+                await TFile.from_file(file, path),
             ]
         )
 
         await self._request(
             "PATCH",
-            httpx.URL(host=url.host, path="/"),
+            self._url(project, path="/"),
             headers={
                 "Content-Type": "application/x-tar+zstd",
                 "Create-Parents": "yes",
