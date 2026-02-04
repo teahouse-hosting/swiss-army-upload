@@ -59,7 +59,9 @@ class TFile:
     @classmethod
     async def from_file(cls, path: os.PathLike | str, dest: str) -> T.Self:
         return cls(
-            name=dest, source=path, mtime=(await anyio.Path(path).stat()).st_mtime
+            name=dest.strip("/"),
+            source=path,
+            mtime=(await anyio.Path(path).stat()).st_mtime,
         )
 
     def to_tarinfo(self) -> tarfile.TarInfo:
