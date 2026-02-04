@@ -96,8 +96,31 @@ def bundle_into_tarfile(files: T.Iterable[TFile]) -> bytes:
                     ftar.addfile(ti, fsrc)
         fbytes.seek(0)
         tardata = fbytes.read()
-        # open('debug.tar.zst', 'wb').write(tardata)
+        # open("debug.tar.zst", "wb").write(tardata)
         return tardata
+
+
+@sync_to_async
+def extractmember(
+    tf: tarfile.TarFile, member: tarfile.TarInfo, dest: os.PathLike | str
+):
+    """
+    Extract an individual file to an exact destination
+    """
+    # FIXME: Do this chunkwise
+    with open(dest, "wb") as fdest:
+        try:
+            fmember = tf.extractfile(member)
+        except KeyError as exc:
+            raise FileNotFoundError from exc
+        if fmember is None:
+            raise IsADirectoryError
+        with fmember:
+            CHUNK_SIZE = 1024 * 1024
+            while chunk := fmember.read(CHUNK_SIZE):
+                fdest.write(chunk)
+
+    os.utime(dest, (member.mtime, member.mtime))
 
 
 class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
@@ -169,7 +192,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
         assert url.scheme == "pages"
         return url.host, url.path.lstrip("/")
 
-    async def _url(self, project: str, **opts) -> httpx.URL:
+    def _url(self, project: str, **opts) -> httpx.URL:
         """
         Produce the API URL for the given project
         """
@@ -242,7 +265,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                     last_updated,
                     cache_updated,
                 )
-                raise NotImplementedError
+                return cache_updated, await sync_to_async(tarfile.open)(archcache)
             else:
                 LOG.debug(
                     "Download archive from server (last_updated:%r > cache_updated:%r)",
@@ -254,14 +277,14 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                 async with self._stream(
                     "GET",
                     self._url(project, path="/.git-pages/archive.tar"),
-                    stream=True,
                 ) as resp:
                     lm = httpdate.httpdate_to_unixtime(resp.headers["Last-Modified"])
                     async with await archcache.open("wb") as fcache:
                         async for chunk in resp.aiter_bytes():
                             await fcache.write(chunk)
-                    raise NotImplementedError
-                    lm, resp
+                await sync_to_async(os.utime)(archcache, (time.time(), lm))
+
+                return cache_updated, await sync_to_async(tarfile.open)(archcache)
 
     async def check_credentials(self, url: httpx.URL) -> bool:
         if not url.host:
@@ -321,15 +344,12 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
         _, tf = await self._download_site(project)
         try:
             ti = await sync_to_async(tf.getmember)(path)
-        except KeyError:
-            return False
+        except KeyError as exc:
+            raise FileNotFoundError from exc
         else:
-            if ti.isfile():
-                # TODO: Show progress to user
-                await sync_to_async(tf.extract)(ti, file)
-            # TODO: Handle links
-            else:
-                raise ValueError(f"Not file: {path}")
+            # TODO: Handle symlinks
+            # TODO: Show progress to user
+            await extractmember(tf, ti, file)
 
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
         project, path = await self._split(url)
