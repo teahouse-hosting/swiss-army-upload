@@ -306,11 +306,30 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                 console.print("Unable to confirm credentials; try again")
 
     async def is_file(self, url: httpx.URL) -> bool:
-        raise NotImplementedError
+        project, path = await self._split(url)
+        _, tf = await self._download_site(project)
+        try:
+            ti = await sync_to_async(tf.getmember)(path)
+        except KeyError:
+            return False
+        else:
+            # TODO: Handle links
+            return ti.isfile()
 
     async def get_to_file(self, url: httpx.URL, file: os.PathLike | str):
-        assert url.scheme == "pages"
-        raise NotImplementedError
+        project, path = await self._split(url)
+        _, tf = await self._download_site(project)
+        try:
+            ti = await sync_to_async(tf.getmember)(path)
+        except KeyError:
+            return False
+        else:
+            if ti.isfile():
+                # TODO: Show progress to user
+                await sync_to_async(tf.extract)(ti, file)
+            # TODO: Handle links
+            else:
+                raise ValueError(f"Not file: {path}")
 
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
         project, path = await self._split(url)
