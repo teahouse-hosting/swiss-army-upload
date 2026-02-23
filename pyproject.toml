@@ -10,7 +10,7 @@ requires-python = ">=3.14,<4.0"
 dependencies = [
     "anyio[trio] (>=4.12.0,<5.0.0)",
     "httpx[http2] (>=0.28.1,<0.29.0)",
-    "handtruck (<0.2.0)",
+    "handtruck (>=0.2.0)",
     "dykes @ git+https://github.com/AstraLuma/dykes.git@subcommands",
     "keyring (>=25.7.0,<26.0.0)",
     # Doesn't implement get_credential(), so useless to us
@@ -67,7 +67,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.briefcase]
 project_name = "Swiss Army Upload"
 bundle = "cafe.teahouse"
-version = "0.0.1"
+# version = "0.0.1"
 url = "https://codeberg.org/teahouse/swiss-army-upload"
 license.file = "LICENSE"
 author = "Jamie Bliss"
@@ -172,4 +172,10 @@ dev = [
     "pytest (>=9.0.2,<10.0.0)",
     "httpx[http2] (>=0.28.1,<0.29.0)",
     "keyrings-alt (>=5.0.2,<6.0.0)"
+]
+docs = [
+    "sphinx (>=9.1.0,<10.0.0)",
+    "sphinxext-opengraph[social-cards] (>=0.13.0,<0.14.0)",
+    "sphinx-autobuild (>=2025.8.25,<2026.0.0)",
+    "sphinx-rtd-theme (>=3.1.0,<4.0.0)"
 ]

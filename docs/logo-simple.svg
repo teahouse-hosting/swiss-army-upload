@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   fill="#000000"
+   width="666.66669"
+   height="897.61914"
+   viewBox="0 0 20.000001 26.928574"
+   id="wifi"
+   data-name="Line Color"
+   class="icon line-color"
+   version="1.1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9" />
+  <path
+     id="secondary"
+     d="m 8,14.972987 a 2,2 0 0 0 2,2 v 0 a 2,2 0 0 0 2,-2 v 0 a 2,2 0 0 0 -2,-2 v 0 a 2,2 0 0 0 -2,2 z"
+     style="display:none;fill:none;stroke:#2ca9bc;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" />
+  <path
+     id="primary"
+     d="m 1,4.2729874 a 14,14 0 0 1 18,0"
+     style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" />
+  <path
+     id="primary-2"
+     data-name="primary"
+     d="m 16.45,7.3329874 a 10,10 0 0 0 -12.9,0"
+     style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" />
+  <path
+     id="primary-3"
+     data-name="primary"
+     d="m 13.87,10.382987 a 6,6 0 0 0 -7.74,0"
+     style="display:none;fill:none;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" />
+  <g
+     id="g1734"
+     transform="rotate(23.22731,27.458033,-3.173577)">
+    <path
+       id="secondary-0"
+       d="m 20.620092,22.925197 2.34,2.35 a 4,4 0 0 0 5.66,0 l -8,-8 a 1.1,1.1 0 0 1 0,0.18 z"
+       style="fill:none;stroke:#000000;stroke-width:2px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1" />
+    <rect
+       id="primary-8"
+       x="14.620092"
+       y="14.455197"
+       width="6"
+       height="18"
+       rx="3"
+       style="fill:none;stroke:#000000;stroke-width:2.00001001;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+  </g>
+</svg>
