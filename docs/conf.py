@@ -17,6 +17,7 @@ highlight_language = None
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    "sphinx.ext.intersphinx",
     "sphinx_rtd_theme",
 ]
 
@@ -35,4 +36,11 @@ html_logo = "logo-simple.svg"
 html_theme_options = {
     "style_nav_header_background": "#6B2E57ff",
     # TODO: Link sources to codeberg
+}
+
+
+# Intersphinx
+
+intersphinx_mapping = {
+    "teahouse": ("https://docs.teahouse.cafe/", None),
 }
