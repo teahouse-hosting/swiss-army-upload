@@ -19,10 +19,10 @@ Swiss Army Upload supports a variety of static hosting providers.
 
    * - Service
      - Address Prefix
-     - :ref:`Files Get/Put <>`
-     - :ref:`Folder Sync <>`
+     - :ref:`Files Get/Put <cmd-files>`
+     - :ref:`Folder Sync <cmd-dirs>`
+     - :ref:`HTTP Redirects <redirects>`
      - :ref:`Custom Headers <>`
-     - :ref:`HTTP Redirects <>`
    * - :ref:`backend-teahouse`
      - ``tea://``
      - ✅
