@@ -4,7 +4,7 @@
 Git Pages
 =========
 
-`Git Pages <https://git-pages.org/>`_ is a non-commercial host focusing on providing websites to Git repos. The main provider is `Grebedoc <https://grebedoc.dev/>`_, but the requirements to self-host are minimal.
+`Git Pages <https://git-pages.org/>`_ is a open source project focusing on hosting websites for Git repos. The main provider is `Grebedoc <https://grebedoc.dev/>`_, but the requirements to self-host are minimal.
 
 :Website: https://git-pages.org/
 :Grebedoc: https://grebedoc.dev/
