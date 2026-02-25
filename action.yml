@@ -1,0 +1,21 @@
+# TODO: Actually test this
+
+name: 'Swiss Army Upload'
+author: 'Teahouse Hosting'
+description: |
+  Upload your static site to several popular indie web hosts
+
+inputs:
+  src:
+    description: 'Source directory to copy from'
+  dest:
+    description: 'URL to sync to'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - swiss-army-upload
+    - sync
+    - ${{ inputs.src }}
+    - ${{ inputs.dest }}
