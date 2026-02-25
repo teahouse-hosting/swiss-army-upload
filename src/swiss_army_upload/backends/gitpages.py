@@ -395,8 +395,9 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
                 return tarfile.data_filter(
                     member.replace(name=member.name.removeprefix(tarprefix)), path
                 )
-            # The else means that the file is outside of the requested path;
-            # don't extract it
+            else:
+                # The file is outside of the requested path, don't extract it
+                return None
 
         # TODO: Show progress to user
         await sync_to_async(tf.extractall)(dest, members, filter=strip_prefix)

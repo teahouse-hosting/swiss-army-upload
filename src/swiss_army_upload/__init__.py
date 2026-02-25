@@ -11,7 +11,7 @@ import httpx
 import rich.logging
 import scr
 
-from .backends import get_backend, UnknownURLError, NoCredentialsFound
+from .backends import get_backend, UnknownURLError, NoCredentialsFound, Backend
 from .deps import enter_container
 
 
@@ -128,11 +128,11 @@ async def do_sync(args: SyncCmd):
     elif sbe is None and dbe is None:
         sys.exit("One of source or destination must be a remote path")
     elif sbe is None:
-        async with dbe:
-            await dbe.rsync_up(Path(args.src), durl, delete=True)
+        async with T.cast(Backend, dbe):
+            await T.cast(Backend, dbe).rsync_up(Path(args.src), durl, delete=True)
     elif dbe is None:
-        async with sbe:
-            await sbe.rsync_down(surl, Path(args.dest), delete=True)
+        async with T.cast(Backend, sbe):
+            await T.cast(Backend, sbe).rsync_down(surl, Path(args.dest), delete=True)
     else:
         assert False, "Shouldn't get here"
 
