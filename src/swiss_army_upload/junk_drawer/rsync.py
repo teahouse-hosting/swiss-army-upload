@@ -219,12 +219,16 @@ class Engine(abc.ABC):
                 await ops.send(
                     Operation(
                         op=Op.DELETE if local2remote else Op.CREATE,
-                        src=local_root / meta.name
-                        if local2remote
-                        else _url_join(remote_root, meta.name),
-                        dest=_url_join(remote_root, meta.name)
-                        if local2remote
-                        else local_root / meta.name,
+                        src=(
+                            local_root / meta.name
+                            if local2remote
+                            else _url_join(remote_root, meta.name)
+                        ),
+                        dest=(
+                            _url_join(remote_root, meta.name)
+                            if local2remote
+                            else local_root / meta.name
+                        ),
                     )
                 )
 
@@ -233,10 +237,16 @@ class Engine(abc.ABC):
                 await ops.send(
                     Operation(
                         op=Op.CREATE if local2remote else Op.DELETE,
-                        src=None if local2remote else _url_join(remote_root, meta.name),
-                        dest=_url_join(remote_root, meta.name)
-                        if local2remote
-                        else local_root / meta.name,
+                        src=(
+                            local_root / meta.name
+                            if local2remote
+                            else _url_join(remote_root, meta.name)
+                        ),
+                        dest=(
+                            _url_join(remote_root, meta.name)
+                            if local2remote
+                            else local_root / meta.name
+                        ),
                     )
                 )
 
@@ -263,12 +273,16 @@ class Engine(abc.ABC):
                     await ops.send(
                         Operation(
                             op=Op.UPDATE,
-                            src=None
-                            if local2remote
-                            else _url_join(remote_root, meta.name),
-                            dest=_url_join(remote_root, meta.name)
-                            if local2remote
-                            else local_root / meta.name,
+                            src=(
+                                local_root / meta.name
+                                if local2remote
+                                else _url_join(remote_root, meta.name)
+                            ),
+                            dest=(
+                                _url_join(remote_root, meta.name)
+                                if local2remote
+                                else local_root / meta.name
+                            ),
                         )
                     )
                     return
@@ -300,12 +314,16 @@ class Engine(abc.ABC):
                     await ops.send(
                         Operation(
                             op=Op.UPDATE,
-                            src=None
-                            if local2remote
-                            else _url_join(remote_root, meta.name),
-                            dest=_url_join(remote_root, meta.name)
-                            if local2remote
-                            else local_root / meta.name,
+                            src=(
+                                local_root / meta.name
+                                if local2remote
+                                else _url_join(remote_root, meta.name)
+                            ),
+                            dest=(
+                                _url_join(remote_root, meta.name)
+                                if local2remote
+                                else local_root / meta.name
+                            ),
                         )
                     )
                     return
