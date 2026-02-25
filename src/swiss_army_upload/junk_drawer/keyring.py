@@ -4,7 +4,6 @@ import typing as T
 
 from anyio import to_thread
 import keyring
-import keyrings.alt
 
 
 class AsyncKeyring(abc.ABC):
@@ -112,12 +111,18 @@ async def get_viable_backends() -> list[type[AsyncKeyring]]:
         sync_classes.remove(keyring.backends.null.Keyring)
     if hasattr(keyring.backends, "fail"):
         sync_classes.remove(keyring.backends.fail.Keyring)
-    if hasattr(keyrings.alt, "multi"):
-        sync_classes.remove(keyrings.alt.multi.MultipartKeyringWrapper)
 
-    # This is insecure and shouldn't be allowed
-    if hasattr(keyrings.alt, "file"):
-        sync_classes.remove(keyrings.alt.file.PlaintextKeyring)
+    try:
+        import keyrings.alt
+    except ImportError:
+        pass
+    else:
+        if hasattr(keyrings.alt, "multi"):
+            sync_classes.remove(keyrings.alt.multi.MultipartKeyringWrapper)
+
+        # This is insecure and shouldn't be allowed
+        if hasattr(keyrings.alt, "file"):
+            sync_classes.remove(keyrings.alt.file.PlaintextKeyring)
 
     wrappers: list[type[AsyncKeyring]] = [
         WrapperKeyring.from_sync(cls) for cls in sync_classes
