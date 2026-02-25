@@ -264,10 +264,6 @@ class Engine(abc.ABC):
                 rcheap = rmeta.populated()
                 lcheap = lmeta.populated()
 
-                # we're ignore mtime for now, lots of stuff can mess with that
-                rcheap.pop("mtime", None)
-                lcheap.pop("mtime", None)
-
                 if rcheap != lcheap:
                     # Mismatch in the easy stuff
                     await ops.send(
@@ -304,10 +300,6 @@ class Engine(abc.ABC):
 
                 rexp = rmeta.populated()
                 lexp = lmeta.populated()
-
-                # we're ignore mtime for now, lots of stuff can mess with that
-                rcheap.pop("mtime", None)
-                lcheap.pop("mtime", None)
 
                 if rexp != lexp:
                     # Mismatch on the hard stuff
