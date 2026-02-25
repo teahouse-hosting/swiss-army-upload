@@ -37,7 +37,7 @@ class LoginCmd:
 @dataclass
 class GetCmd:
     """
-    Download one or more files.
+    Download a file.
 
     Both the source and the destination must include the file name.
     """
@@ -49,13 +49,25 @@ class GetCmd:
 @dataclass
 class PutCmd:
     """
-    Upload one or more files
+    Upload a file
 
     Both the source and the destination must include the file name.
     """
 
     src: T.Annotated[Path, "Path to read from"]
     dest: T.Annotated[httpx.URL, "URL to write to"]
+
+
+@dataclass
+class SyncCmd:
+    """
+    Synchronize one directory to another.
+
+    No implicit names are added to the end of the destination path.
+    """
+
+    src: T.Annotated[str, "Path or URL to read from"]
+    dest: T.Annotated[str, "URL or path to write to"]
 
 
 @dataclass
@@ -67,6 +79,7 @@ class SAUArgs:
     login: dykes.Subparser[LoginCmd] = None
     get: dykes.Subparser[GetCmd] = None
     put: dykes.Subparser[PutCmd] = None
+    sync: dykes.Subparser[SyncCmd] = None
 
 
 async def do_login(args: LoginCmd):
@@ -97,6 +110,33 @@ async def do_put(args: PutCmd):
         await backend.put_from_file(args.src, args.dest)
 
 
+async def do_sync(args: SyncCmd):
+    surl = httpx.URL(args.src)
+    durl = httpx.URL(args.dest)
+    try:
+        sbe = get_backend(args, surl)
+    except UnknownURLError:
+        sbe = None
+
+    try:
+        dbe = get_backend(args, durl)
+    except UnknownURLError:
+        dbe = None
+
+    if sbe is not None and dbe is not None:
+        sys.exit("One of source or destination must be a local path")
+    elif sbe is None and dbe is None:
+        sys.exit("One of source or destination must be a remote path")
+    elif sbe is None:
+        async with dbe:
+            await dbe.rsync_up(Path(args.src), durl, delete=True)
+    elif dbe is None:
+        async with sbe:
+            await sbe.rsync_down(surl, Path(args.dest), delete=True)
+    else:
+        assert False, "Shouldn't get here"
+
+
 async def main():
     async with scr.ainit():
         args = dykes.parse_args(SAUArgs)
@@ -112,6 +152,9 @@ async def main():
             elif args.put is not None:
                 async with enter_container(args, args.put):
                     await do_put(args.put)
+            elif args.sync is not None:
+                async with enter_container(args, args.sync):
+                    await do_sync(args.sync)
             else:
                 # FIXME: Print usage
                 sys.exit("No command specified")

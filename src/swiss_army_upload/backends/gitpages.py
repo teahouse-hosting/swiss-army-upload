@@ -370,3 +370,33 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
             },
             content=data,
         )
+
+    async def rsync_up(self, src: os.PathLike | str, dest: httpx.URL, *, delete: bool):
+        raise NotImplementedError
+
+    async def rsync_down(
+        self, src: httpx.URL, dest: os.PathLike | str, *, delete: bool
+    ):
+        # FIXME: Implement delete
+        # If url is pages://foo.bar/proj/path/to/file.html:
+        project, suffix = await self._split(src)
+        # project: foo.bar/proj
+        # suffix: path/to/file.html
+        tarprefix = suffix.lstrip("/") + "/"
+        _, tf = await self._download_site(project)
+
+        members = await sync_to_async(tf.getmembers)()
+
+        def strip_prefix(
+            member: tarfile.TarInfo, path: str, /
+        ) -> tarfile.TarInfo | None:
+            if member.name.startswith(tarprefix):
+                # Remove the prefix and then pass it to data_filter()
+                return tarfile.data_filter(
+                    member.replace(name=member.name.removeprefix(tarprefix)), path
+                )
+            # The else means that the file is outside of the requested path;
+            # don't extract it
+
+        # TODO: Show progress to user
+        await sync_to_async(tf.extractall)(dest, members, filter=strip_prefix)

@@ -272,3 +272,11 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
         client, s3url = await self._munge_url(url)
         await client.put_file_multipart(s3url, os.fspath(file))
+
+    async def rsync_up(self, src: os.PathLike | str, dest: httpx.URL, *, delete: bool):
+        raise NotImplementedError
+
+    async def rsync_down(
+        self, src: httpx.URL, dest: os.PathLike | str, *, delete: bool
+    ):
+        raise NotImplementedError
