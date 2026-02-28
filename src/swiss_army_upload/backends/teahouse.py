@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 from http import HTTPStatus
 import http.cookiejar
@@ -16,6 +18,7 @@ from . import Backend, InvalidCredentials, UnknownSite, NoCredentialsFound
 
 # from ..junk_drawer.github import github_oidc
 from ..junk_drawer.keyring import AsyncKeyring
+from ..junk_drawer import rsync
 
 
 LOG = logging.getLogger(__name__)
@@ -194,13 +197,49 @@ class TeahouseCredentials(
         return self._signer
 
 
+class TeahouseSync(rsync.SyncEngine):
+    def __init__(self, backend: TeahouseBackend):
+        self.backend = backend
+
+    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
+        return await self.backend._munge_url(url)
+
+    async def iter_remote(
+        self,
+        url: httpx.URL,
+        stream: anyio.abc.UnreliableObjectSendStream[rsync.RFileMeta],
+    ):
+        """
+        Produce the list of files on the remote.
+
+        Only populate metadata fields that are free.
+        """
+        async with stream:
+            client, path = await self._munge_url(url)
+            async for page in client.list_objects_v2(path):
+                for meta in page:
+                    await stream.send(
+                        rsync.RFileMeta(
+                            name=meta.key,
+                            size=meta.size,
+                            mtime=meta.last_modified,
+                        )
+                    )
+
+    async def fill_remote_meta(
+        self, url: httpx.URL, meta: rsync.RFileMeta, field_hints: list[str]
+    ):
+        raise NotImplementedError
+
+
 class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
-    _client: handtruck.S3Client
+    _creds: dict[str, TeahouseCredentials]
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self):
         self.exitstack = contextlib.AsyncExitStack()
-        async with self.exitstack:
+        self._creds = dict()
+        async with anyio.create_task_group() as self.taskgroup, self.exitstack:
             yield self
 
     async def check_credentials(self, url: httpx.URL) -> bool:
@@ -245,11 +284,26 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             if not credentials_ok:
                 console.print("Unable to confirm credentials; try again")
 
+    async def _start_cred(self, hostname):
+        # This exists to shuffle between task groups
+        # We want all the credential tasks to be within the backend's taskgroup/context manager
+        async def create(
+            *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
+        ):
+            self._creds[hostname] = await self.exitstack.enter_async_context(
+                TeahouseCredentials(self.scr, hostname)
+            )
+            task_status.started()
+
+        await self.taskgroup.start(create)
+        return self._creds[hostname]
+
     async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
         http = await self.scr.aget(httpx.AsyncClient)
-        creds = await self.exitstack.enter_async_context(
-            TeahouseCredentials(self.scr, url.host)
-        )
+        creds = self._creds.get(url.host, None)
+        if creds is None:
+            creds = await self._start_cred(url.host)
+
         client = handtruck.S3Client(url=creds.endpoint, client=http, credentials=creds)
         return client, f"{creds.bucket}/{url.path}"
 
@@ -279,4 +333,12 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
     async def rsync_down(
         self, src: httpx.URL, dest: os.PathLike | str, *, delete: bool
     ):
-        raise NotImplementedError
+        pdest = anyio.Path(dest)
+        await pdest.mkdir(exist_ok=True, parents=True)
+        sync = TeahouseSync(self)
+        async with anyio.create_task_group() as tg:
+            send, recv = anyio.create_memory_object_stream[rsync.Operation]()
+            tg.start_soon(sync, src, pdest, send)
+            async with recv:
+                async for op in recv:
+                    print(op)

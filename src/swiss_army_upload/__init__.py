@@ -168,8 +168,8 @@ async def main():
                 LOG.error("%s\nDid you need to use the login command?", ncf.args[0])
             del ncf
             retval = 1
-        except* KeyboardInterrupt:
-            retval = 1
+        # except* KeyboardInterrupt:
+        #     retval = 1
         sys.exit(retval)
 
 

@@ -72,13 +72,14 @@ async def _better_walk(
     Yield all the files within the root, recursively.
     """
     q = collections.deque([root])
-    while q:
-        pdir = q.popleft()
-        async for file in pdir.iterdir():
-            if file.info.is_file():
-                await stream.send(file)
-            elif file.info.is_dir():
-                q.append(file)
+    async with stream:
+        while q:
+            pdir = q.popleft()
+            async for file in pdir.iterdir():
+                if file.info.is_file():
+                    await stream.send(file)
+                elif file.info.is_dir():
+                    q.append(file)
 
 
 class Op(enum.Enum):
@@ -95,10 +96,23 @@ class Operation:
 
 
 def _url_join(url: httpx.URL, stub: str) -> httpx.URL:
+    """
+    Join a path to a URL, following path rules (not browser rules).
+    """
     return httpx.URL(url, path=posixpath.join(url.path, stub))
 
 
-class Engine(abc.ABC):
+def _intersect_eq(left: dict, right: dict) -> bool:
+    """
+    Compare two dicts, but only based on their common keys.
+    """
+    common = set(left.keys()) & set(right.keys())
+    return {k: v for k, v in left.items() if k in common} == {
+        k: v for k, v in right.items() if k in common
+    }
+
+
+class SyncEngine(abc.ABC):
     #: Suggested RFileMeta fields to request
     attrs_to_get: list[str]
 
@@ -112,6 +126,7 @@ class Engine(abc.ABC):
         Only populate metadata fields that are free.
         """
 
+    @abc.abstractmethod
     async def fill_remote_meta(
         self, url: httpx.URL, meta: RFileMeta, field_hints: list[str]
     ):
@@ -175,7 +190,11 @@ class Engine(abc.ABC):
             tg.start_soon(func, root, send)
             async with recv:
                 async for meta in recv:
+                    print(f"_build_meta_dict {func=} {meta=}")
                     results[meta.name] = meta
+                print(f"_build_meta_dict {func=} done iteration", flush=True)
+            print(f"_build_meta_dict {func=} exited recv", flush=True)
+        print(f"_build_meta_dict {func=} exited tg", flush=True)
 
     async def __call__(
         self,
@@ -261,10 +280,7 @@ class Engine(abc.ABC):
                     [name for name, val in vars(rmeta).items() if val is not None],
                 )
 
-                rcheap = rmeta.populated()
-                lcheap = lmeta.populated()
-
-                if rcheap != lcheap:
+                if _intersect_eq(rmeta.populated(), lmeta.populated()):
                     # Mismatch in the easy stuff
                     await ops.send(
                         Operation(
@@ -298,10 +314,7 @@ class Engine(abc.ABC):
                         self.attrs_to_get,
                     )
 
-                rexp = rmeta.populated()
-                lexp = lmeta.populated()
-
-                if rexp != lexp:
+                if _intersect_eq(rmeta.populated(), lmeta.populated()):
                     # Mismatch on the hard stuff
                     await ops.send(
                         Operation(
