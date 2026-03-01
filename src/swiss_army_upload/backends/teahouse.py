@@ -6,6 +6,7 @@ import http.cookiejar
 import logging
 import os
 import time
+import typing as T
 
 import anyio
 from aws_request_signer import AwsRequestSigner
@@ -126,9 +127,7 @@ def _get_auth(svcs_container):
 scr.registry.register_factory(TeahouseAuth, _get_auth, enter=False)
 
 
-class TeahouseCredentials(
-    handtruck.credentials.AbstractCredentials, anyio.AsyncContextManagerMixin
-):
+class TeahouseCredentials(handtruck.credentials.AbstractCredentials):
     taskgroup: anyio.abc.TaskGroup
     bucket: str
     endpoint: str | httpx.URL
@@ -275,7 +274,7 @@ class TeahouseSync(rsync.SyncEngine):
 
 
 class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
-    _creds: dict[str, TeahouseCredentials]
+    _creds: CredCache
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self):
@@ -368,14 +367,18 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             tg.start_soon(sync, src, pdest, send)
             async with recv:
                 async for op in recv:
-                    print(op)
                     match op:
-                        case rsync.Operation(op=rsync.Op.CREATE, src=src, dest=dest):
-                            await dest.parent.mkdir(exist_ok=True, parents=True)
-                            tg.start_soon(self.get_to_file, src, dest)
-                        case rsync.Operation(op=rsync.Op.UPDATE, src=src, dest=dest):
-                            tg.start_soon(self.get_to_file, src, dest)
-                        case rsync.Operation(op=rsync.Op.DELETE, dest=dest):
-                            tg.start_soon(dest.unlink)
+                        case rsync.Operation(op=rsync.Op.CREATE, src=osrc, dest=odest):
+                            podest = T.cast(anyio.Path, odest)
+                            uosrc = T.cast(httpx.URL, osrc)
+                            await podest.parent.mkdir(exist_ok=True, parents=True)
+                            tg.start_soon(self.get_to_file, uosrc, podest)
+                        case rsync.Operation(op=rsync.Op.UPDATE, src=osrc, dest=odest):
+                            podest = T.cast(anyio.Path, odest)
+                            uosrc = T.cast(httpx.URL, osrc)
+                            tg.start_soon(self.get_to_file, uosrc, podest)
+                        case rsync.Operation(op=rsync.Op.DELETE, dest=odest):
+                            podest = T.cast(anyio.Path, odest)
+                            tg.start_soon(podest.unlink)
                         case _:
                             raise NotImplementedError(op)
