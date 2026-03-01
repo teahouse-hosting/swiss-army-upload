@@ -223,7 +223,7 @@ class SyncEngine(abc.ABC):
                 )
 
             remote_files = set(remote_metas.keys())
-            local_files = set(remote_metas.keys())
+            local_files = set(local_metas.keys())
 
             # Second, figure out the creates and deletes
             only_remote = remote_files - local_files

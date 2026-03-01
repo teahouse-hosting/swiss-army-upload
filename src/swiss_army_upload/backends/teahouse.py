@@ -360,4 +360,12 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             tg.start_soon(sync, src, pdest, send)
             async with recv:
                 async for op in recv:
-                    print(op)
+                    match op:
+                        case rsync.Operation(op=rsync.Op.CREATE, src=src, dest=dest):
+                            tg.start_soon(self.get_to_file, src, dest)
+                        case rsync.Operation(op=rsync.Op.UPDATE, src=src, dest=dest):
+                            tg.start_soon(self.get_to_file, src, dest)
+                        case rsync.Operation(op=rsync.Op.DELETE, dest=dest):
+                            tg.start_soon(dest.unlink)
+                        case _:
+                            raise NotImplementedError(op)
