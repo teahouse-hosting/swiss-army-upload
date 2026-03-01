@@ -136,19 +136,10 @@ class TeahouseCredentials(
         self.refresh_lock: anyio.Lock = anyio.Lock()
         self._signer: AwsRequestSigner | None = None
 
-    @contextlib.asynccontextmanager
-    async def __asynccontextmanager__(self):
-        async with anyio.create_task_group() as self.taskgroup:
-            await self.taskgroup.start(
-                self._refresher, name="TeahouseCredentials-refresher"
-            )
-            yield self
-            self.taskgroup.cancel_scope.cancel()
-
     def __bool__(self) -> bool:
         return self._signer is not None
 
-    async def _refresher(
+    async def refresh_task(
         self, *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
     ) -> None:
         http, auth = await self._scr.aget(httpx.AsyncClient, TeahouseAuth)
@@ -197,7 +188,54 @@ class TeahouseCredentials(
         return self._signer
 
 
+class CredCache(anyio.AsyncContextManagerMixin):
+    """
+    Owns the credential instances and manages their tasks.
+
+    This exists because juggling structural tasks is as subtle as a wizard
+    dragon.
+    """
+
+    # Do not meddle in the affairs of wizards, for they are subtle and quick to anger.
+    # Do not meddle in the affairs of dragons for you are crunchy and taste good with ketchup.
+    # Jamie had a lot of trouble getting trio happy with refresh tasks, even
+    # before weakrefs, so now this exists.
+
+    creds: dict[str, TeahouseCredentials]
+
+    def __init__(self, scr: scr.Container):
+        self._scr = scr
+        self.creds = {}
+
+    @contextlib.asynccontextmanager
+    async def __asynccontextmanager__(self):
+        # This task group owns all the refresh tasks
+        async with anyio.create_task_group() as self.taskgroup:
+            yield self
+            self.taskgroup.cancel_scope.cancel()
+
+    async def get(self, domain: str) -> TeahouseCredentials:
+        """
+        Get a credentials for the given domain.
+
+        Might be a new or existing instance.
+        """
+        # This can be called from any task
+        if domain not in self.creds:
+            self.creds[domain] = cred = TeahouseCredentials(self._scr, domain)
+            await self.taskgroup.start(
+                cred.refresh_task, name=f"TeahouseCredentials-refresher-{domain}"
+            )
+        # Jamie thinks there's a race condition, where if two tasks ask for the
+        # same credentials at the same time, one of them will get the instance
+        # while it's semi-initialized.
+        return self.creds[domain]
+
+
 class TeahouseSync(rsync.SyncEngine):
+    # There aren't additional attributes we can get without just downloading the file
+    attrs_to_get = []
+
     def __init__(self, backend: TeahouseBackend):
         self.backend = backend
 
@@ -237,9 +275,7 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self):
-        self.exitstack = contextlib.AsyncExitStack()
-        self._creds = dict()
-        async with anyio.create_task_group() as self.taskgroup, self.exitstack:
+        async with CredCache(self.scr) as self._creds:
             yield self
 
     async def check_credentials(self, url: httpx.URL) -> bool:
@@ -284,26 +320,9 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             if not credentials_ok:
                 console.print("Unable to confirm credentials; try again")
 
-    async def _start_cred(self, hostname):
-        # This exists to shuffle between task groups
-        # We want all the credential tasks to be within the backend's taskgroup/context manager
-        async def create(
-            *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
-        ):
-            self._creds[hostname] = await self.exitstack.enter_async_context(
-                TeahouseCredentials(self.scr, hostname)
-            )
-            task_status.started()
-
-        await self.taskgroup.start(create)
-        return self._creds[hostname]
-
     async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
         http = await self.scr.aget(httpx.AsyncClient)
-        creds = self._creds.get(url.host, None)
-        if creds is None:
-            creds = await self._start_cred(url.host)
-
+        creds = await self._creds.get(url.host)
         client = handtruck.S3Client(url=creds.endpoint, client=http, credentials=creds)
         return client, f"{creds.bucket}/{url.path}"
 

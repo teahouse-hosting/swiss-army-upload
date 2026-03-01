@@ -190,11 +190,7 @@ class SyncEngine(abc.ABC):
             tg.start_soon(func, root, send)
             async with recv:
                 async for meta in recv:
-                    print(f"_build_meta_dict {func=} {meta=}")
                     results[meta.name] = meta
-                print(f"_build_meta_dict {func=} done iteration", flush=True)
-            print(f"_build_meta_dict {func=} exited recv", flush=True)
-        print(f"_build_meta_dict {func=} exited tg", flush=True)
 
     async def __call__(
         self,
