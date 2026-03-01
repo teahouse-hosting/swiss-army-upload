@@ -5,9 +5,11 @@ from http import HTTPStatus
 import http.cookiejar
 import logging
 import os
+import time
 
 import anyio
 from aws_request_signer import AwsRequestSigner
+from httpdate import httpdate_to_unixtime
 import httpx
 import handtruck
 import rich.console
@@ -19,6 +21,7 @@ from . import Backend, InvalidCredentials, UnknownSite, NoCredentialsFound
 # from ..junk_drawer.github import github_oidc
 from ..junk_drawer.keyring import AsyncKeyring
 from ..junk_drawer import rsync
+from ..junk_drawer.sync import sync_to_async
 
 
 LOG = logging.getLogger(__name__)
@@ -267,7 +270,8 @@ class TeahouseSync(rsync.SyncEngine):
     async def fill_remote_meta(
         self, url: httpx.URL, meta: rsync.RFileMeta, field_hints: list[str]
     ):
-        raise NotImplementedError
+        # There's no fields we could query extra for
+        return
 
 
 class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
@@ -341,6 +345,10 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
     async def get_to_file(self, url: httpx.URL, file: os.PathLike | str):
         client, s3url = await self._munge_url(url)
         await client.get_file_parallel(s3url, os.fspath(file))
+        # FIXME: Grab a modified time from one of the download requests
+        resp = await client.head(s3url)
+        mtime = httpdate_to_unixtime(resp.headers["Last-Modified"])
+        await sync_to_async(os.utime)(file, (time.time(), mtime))
 
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
         client, s3url = await self._munge_url(url)
@@ -360,8 +368,10 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             tg.start_soon(sync, src, pdest, send)
             async with recv:
                 async for op in recv:
+                    print(op)
                     match op:
                         case rsync.Operation(op=rsync.Op.CREATE, src=src, dest=dest):
+                            await dest.parent.mkdir(exist_ok=True, parents=True)
                             tg.start_soon(self.get_to_file, src, dest)
                         case rsync.Operation(op=rsync.Op.UPDATE, src=src, dest=dest):
                             tg.start_soon(self.get_to_file, src, dest)

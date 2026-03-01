@@ -276,20 +276,20 @@ class SyncEngine(abc.ABC):
                     [name for name, val in vars(rmeta).items() if val is not None],
                 )
 
-                if _intersect_eq(rmeta.populated(), lmeta.populated()):
+                if not _intersect_eq(rmeta.populated(), lmeta.populated()):
                     # Mismatch in the easy stuff
                     await ops.send(
                         Operation(
                             op=Op.UPDATE,
                             src=(
-                                local_root / meta.name
+                                local_root / lmeta.name
                                 if local2remote
-                                else _url_join(remote_root, meta.name)
+                                else _url_join(remote_root, rmeta.name)
                             ),
                             dest=(
-                                _url_join(remote_root, meta.name)
+                                _url_join(remote_root, rmeta.name)
                                 if local2remote
-                                else local_root / meta.name
+                                else local_root / lmeta.name
                             ),
                         )
                     )
@@ -310,7 +310,7 @@ class SyncEngine(abc.ABC):
                         self.attrs_to_get,
                     )
 
-                if _intersect_eq(rmeta.populated(), lmeta.populated()):
+                if not _intersect_eq(rmeta.populated(), lmeta.populated()):
                     # Mismatch on the hard stuff
                     await ops.send(
                         Operation(
