@@ -356,6 +356,10 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
         client, s3url = await self._munge_url(url)
         await client.put_file_multipart(s3url, os.fspath(file))
 
+    async def _delete_object(self, url: httpx.URL):
+        client, s3url = await self._munge_url(url)
+        await client.delete(s3url)
+
     async def rsync_up(self, src: os.PathLike | str, dest: httpx.URL, *, delete: bool):
         sync = TeahouseSync(self)
         async with anyio.create_task_group() as tg:
@@ -374,7 +378,7 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
                             tg.start_soon(self.put_from_file, posrc, uodest)
                         case rsync.Operation(op=rsync.Op.DELETE, dest=odest):
                             uodest = T.cast(httpx.URL, odest)
-                            print(f"TODO: Delete {uodest}")
+                            tg.start_soon(self._delete_object, uodest)
                         case _:
                             raise NotImplementedError(op)
 
