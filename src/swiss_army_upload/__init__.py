@@ -137,6 +137,14 @@ async def do_sync(args: SyncCmd):
         assert False, "Shouldn't get here"
 
 
+def flatten_excetions[E: Exception](grp: ExceptionGroup[E]) -> T.Iterable[E]:
+    for exc in grp.exceptions:
+        if isinstance(exc, ExceptionGroup):
+            yield from flatten_excetions(exc)
+        else:
+            yield exc
+
+
 async def main():
     async with scr.ainit():
         args = dykes.parse_args(SAUArgs)
@@ -159,17 +167,26 @@ async def main():
                 # FIXME: Print usage
                 sys.exit("No command specified")
         except* UnknownURLError as egrp:
-            for uue in egrp.exceptions:
+            for uue in flatten_excetions(egrp):
                 LOG.error("%s", str(uue.args[0]))
             del uue
             retval = 1
         except* NoCredentialsFound as egrp:
-            for ncf in egrp.exceptions:
+            for ncf in flatten_excetions(egrp):
                 LOG.error("%s\nDid you need to use the login command?", ncf.args[0])
             del ncf
             retval = 1
-        # except* KeyboardInterrupt:
-        #     retval = 1
+        except* httpx.HTTPError as egrp:
+            for rt in flatten_excetions(egrp):
+                try:
+                    rt.add_note(f"URL: {rt.request.url}")
+                except RuntimeError:
+                    # Request property has not been set
+                    pass
+            del rt
+            raise
+        except* KeyboardInterrupt:
+            retval = 1
         sys.exit(retval)
 
 
