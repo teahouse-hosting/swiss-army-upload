@@ -327,7 +327,10 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
         http = await self.scr.aget(httpx.AsyncClient)
         creds = await self._creds.get(url.host)
         client = handtruck.S3Client(url=creds.endpoint, client=http, credentials=creds)
-        return client, f"{creds.bucket}/{url.path}"
+        if url.path == "/":
+            return client, creds.bucket
+        else:
+            return client, f"{creds.bucket}/{url.path.lstrip('/')}"
 
     async def is_file(self, url: httpx.URL) -> bool:
         assert url.scheme == "tea"
@@ -354,7 +357,26 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
         await client.put_file_multipart(s3url, os.fspath(file))
 
     async def rsync_up(self, src: os.PathLike | str, dest: httpx.URL, *, delete: bool):
-        raise NotImplementedError
+        sync = TeahouseSync(self)
+        async with anyio.create_task_group() as tg:
+            send, recv = anyio.create_memory_object_stream[rsync.Operation]()
+            tg.start_soon(sync, anyio.Path(src), dest, send)
+            async with recv:
+                async for op in recv:
+                    match op:
+                        case rsync.Operation(op=rsync.Op.CREATE, src=osrc, dest=odest):
+                            posrc = T.cast(anyio.Path, osrc)
+                            uodest = T.cast(httpx.URL, odest)
+                            tg.start_soon(self.put_from_file, posrc, uodest)
+                        case rsync.Operation(op=rsync.Op.UPDATE, src=osrc, dest=odest):
+                            posrc = T.cast(anyio.Path, osrc)
+                            uodest = T.cast(httpx.URL, odest)
+                            tg.start_soon(self.put_from_file, posrc, uodest)
+                        case rsync.Operation(op=rsync.Op.DELETE, dest=odest):
+                            uodest = T.cast(httpx.URL, odest)
+                            print(f"TODO: Delete {uodest}")
+                        case _:
+                            raise NotImplementedError(op)
 
     async def rsync_down(
         self, src: httpx.URL, dest: os.PathLike | str, *, delete: bool
@@ -369,13 +391,13 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
                 async for op in recv:
                     match op:
                         case rsync.Operation(op=rsync.Op.CREATE, src=osrc, dest=odest):
-                            podest = T.cast(anyio.Path, odest)
                             uosrc = T.cast(httpx.URL, osrc)
+                            podest = T.cast(anyio.Path, odest)
                             await podest.parent.mkdir(exist_ok=True, parents=True)
                             tg.start_soon(self.get_to_file, uosrc, podest)
                         case rsync.Operation(op=rsync.Op.UPDATE, src=osrc, dest=odest):
-                            podest = T.cast(anyio.Path, odest)
                             uosrc = T.cast(httpx.URL, osrc)
+                            podest = T.cast(anyio.Path, odest)
                             tg.start_soon(self.get_to_file, uosrc, podest)
                         case rsync.Operation(op=rsync.Op.DELETE, dest=odest):
                             podest = T.cast(anyio.Path, odest)
