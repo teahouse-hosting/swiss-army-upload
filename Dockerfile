@@ -4,7 +4,7 @@ ARG PYVER=3.14
 
 FROM docker.io/library/python:${PYVER}-alpine AS build
 ARG PYVER
-RUN apk add git poetry
+RUN --mount=type=cache,id=apk,target=/var/cache apk add git poetry
 WORKDIR /sau
 COPY . /sau
 RUN poetry build
