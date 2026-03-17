@@ -29,9 +29,6 @@ jobs:
       # id-token: write
 
     steps:
-      - name: docker run
-        run: docker info
-
       - name: Checkout repository
         uses: https://data.forgejo.org/actions/checkout@v4
 
@@ -67,7 +64,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.couch_tag }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
