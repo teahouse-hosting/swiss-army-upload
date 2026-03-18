@@ -31,6 +31,8 @@ jobs:
       - name: Checkout repository
         uses: https://data.forgejo.org/actions/checkout@v4
 
+      # qemu is already installed on the host, no action needed
+
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
       - name: Set up Docker Buildx
@@ -62,6 +64,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ steps.buildx.outputs.platforms }}
+          # Implicit platforms only builds amd64
+          # Python doesn't ship all the images that qemu supports
+          # This is the manual intersection of qemu and python
+          platforms: linux/amd64,linux/riscv64,linux/ppc64le,linux/s390x,linux/386,linux/arm/v7,linux/arm/v6,linux/arm64/v8
+          # Only qemu: linux/amd64/v2,linux/amd64/v3,linux/ppc64,linux/mips64le,linux/mips64,linux/loong64,
+          # Buildx reports linux/arm64, but linux/arm64/v8 runs just fine
+          # These derive from https://go.dev/doc/install/source#environment
           cache-from: type=gha
           cache-to: type=gha,mode=max
