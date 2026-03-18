@@ -34,6 +34,7 @@ jobs:
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
       - name: Set up Docker Buildx
+        id: buildx
         uses: https://github.com/docker/setup-buildx-action@v3.0.0
 
       # Login against a Docker registry except on PR
@@ -61,5 +62,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ steps.buildx.outputs.platforms }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
