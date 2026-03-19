@@ -45,10 +45,14 @@ jobs:
     steps:
       - name: checkout-code
         uses: https://data.forgejo.org/actions/checkout@v4
-      - name: install deps
+      - name: install poetry
         run: |
-          pipx install poetry
-          ~/.local/bin/poetry install
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: install python
+        uses: https://github.com/actions/setup-python@v6
+        with:
+          cache: 'poetry'
       - name: type check
         run: |
           ~/.local/bin/poetry run mypy
