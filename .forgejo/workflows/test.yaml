@@ -8,37 +8,28 @@ on:
   workflow_dispatch:
 
 jobs:
-  # pytest:
-  #   runs-on: hephestus
-  #   strategy:
-  #     matrix:
-  #       # Based on https://versions.do1g.com/
-  #       python-version: ['3.12', '3.13', '3.14']
-  #   services:
-  #     faux3:
-  #       image: docker.io/localstack/localstack@sha256:2c32486ed9ce66afbc6f8792dc6719a35890b454ecae7dc09eb9acecd057eda8
-  #       # localstack healthcheck is broken
-  #       options: --no-healthcheck
-  #   steps:
-  #     - name: checkout-code
-  #       uses: https://data.forgejo.org/actions/checkout@v4
-  #     - name: install poetry
-  #       run: |
-  #         curl -sSL https://install.python-poetry.org | python3 -
-  #         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-  #     - name: install python
-  #       uses: https://github.com/actions/setup-python@v6
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #         cache: 'poetry'
-  #     - name: install deps
-  #       run: |
-  #         poetry install
-  #     - name: run tests
-  #       env:
-  #         S3_ADDR: faux3:4566
-  #       run: |
-  #         poetry run pytest --verbose
+  pytest:
+    runs-on: hephestus
+    strategy:
+      matrix:
+        # Based on https://versions.do1g.com/
+        python-version: ['3.12', '3.13', '3.14']
+    steps:
+      - name: checkout-code
+        uses: https://data.forgejo.org/actions/checkout@v4
+      - name: install poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: install python
+        uses: https://github.com/actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'poetry'
+      - run: poetry install
+      - name: run tests
+        run: |
+          poetry run pytest --verbose
 
   mypy:
     runs-on: hephestus
