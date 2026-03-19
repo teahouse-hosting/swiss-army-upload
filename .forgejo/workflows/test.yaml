@@ -53,6 +53,7 @@ jobs:
         uses: https://github.com/actions/setup-python@v6
         with:
           cache: 'poetry'
+          python-version: "3.14"
       - name: type check
         run: |
-          ~/.local/bin/poetry run mypy
+          poetry run mypy
