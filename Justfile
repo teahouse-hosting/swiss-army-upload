@@ -33,3 +33,8 @@ _changelog:
 # Run the command
 sau *ARGS:
   poetry run swiss-army-upload {{ARGS}}
+
+
+# Do the multi-platform build locally
+qemu-build:
+  docker buildx build --platform linux/amd64,linux/riscv64,linux/ppc64le,linux/s390x,linux/386,linux/arm/v7,linux/arm/v6,linux/arm64/v8 .
