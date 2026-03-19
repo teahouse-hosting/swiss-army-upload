@@ -54,6 +54,7 @@ jobs:
         with:
           cache: 'poetry'
           python-version: "3.14"
+      - run: poetry install
       - name: type check
         run: |
           poetry run mypy
