@@ -23,6 +23,7 @@ from . import Backend, InvalidCredentials, UnknownSite, NoCredentialsFound
 from ..junk_drawer.keyring import AsyncKeyring
 from ..junk_drawer import rsync
 from ..junk_drawer.sync import sync_to_async
+from ..junk_drawer.oidc import oidc_tool
 
 
 LOG = logging.getLogger(__name__)
@@ -76,15 +77,18 @@ class TeahouseAuth(httpx.Auth):
         resp = yield request
 
         if self.asking_for_auth(resp):
-            # Check if we're in github and there's an OIDC token
-            # FIXME: Reimplement github_oidc() in an async-friendly way
-            oidc = None  # yield from github_oidc()
-            if oidc is not None:
+            # Check if we're in CI and there's an OIDC token
+            if (oidc := oidc_tool()) is not None:
+                async for req in oidc:
+                    resp = yield req
+                    await oidc.asend(resp)
+
+            if oidc:
                 LOG.debug("Got OIDC")
                 # There is an OIDC token, use that and stash it for later.
                 # We don't need to cache this because the actions environment is
                 # ephemeral and github wants us to do it more.
-                self.token = oidc
+                self.token = oidc.token
                 request.headers["Authorization"] = f"Bearer {self.token}"
                 yield request
             else:
@@ -112,6 +116,7 @@ class TeahouseAuth(httpx.Auth):
                             pass
                         else:
                             raise exc
+                    # Requests only receive cookies at initial creation
                     httpx.Cookies(cookiejar).set_cookie_header(request=request)
                     yield request
                 else:
