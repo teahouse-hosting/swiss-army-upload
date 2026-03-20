@@ -2,9 +2,9 @@
 Mock server for counter.teahouse.cafe
 """
 
-from flask import Flask
+from quart import Quart
 
-app = Flask(__name__)
+app = Quart(__name__)
 
 
 @app.route("/user/")
