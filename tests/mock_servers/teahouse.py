@@ -5,12 +5,18 @@ Mock server for counter.teahouse.cafe
 import contextlib
 import typing as T
 
+import handtruck
+import httpx
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse, RedirectResponse
+from starlette.responses import JSONResponse, RedirectResponse, Response
 from starlette.routing import Route
 
 
 SESSION_COOKIE = "pytest_user_status"
+
+LOCALSTACK_ENDPOINT: tuple[str, int]
+http_client: httpx.AsyncClient = T.cast(httpx.AsyncClient, None)
+# ^^ this cast exists entirely to make both ruff and mypy happy
 
 
 @contextlib.asynccontextmanager
@@ -24,7 +30,7 @@ async def get_body(request) -> T.AsyncIterator[dict]:
 
 def get_auth(request) -> dict | None:
     if SESSION_COOKIE in request.cookies:
-        return {"email": request.cookies["SESSION_COOKIE"]}
+        return {"email": request.cookies[SESSION_COOKIE]}
     else:
         return None
 
@@ -70,6 +76,21 @@ async def get_s3_config(request):
             if "domain" not in input:
                 return JSONResponse("domain plz", status_code=400)
 
+            truck = handtruck.S3Client(
+                url="http://objects.test",
+                client=http_client,
+                access_key_id="TODO",
+                secret_access_key="TODO",
+                region="us-east-1",
+            )
+
+            try:
+                # Test if bucket exists
+                await truck.get(input["domain"])
+            except handtruck.exceptions.NoSuchBucket:
+                # Create bucket
+                await truck.put(input["domain"], "")
+
             return JSONResponse(
                 {
                     "AWS_ACCESS_KEY_ID": "TODO",
@@ -82,7 +103,7 @@ async def get_s3_config(request):
             )
 
 
-app = Starlette(
+admin = Starlette(
     debug=True,
     routes=[
         Route("/auth/login/", login, methods=["POST"]),
@@ -90,4 +111,26 @@ app = Starlette(
         Route("/upload/get-s3-config", get_s3_config, methods=["POST"]),
         Route("/user/", user_info, methods=["GET"]),
     ],
+)
+
+
+async def serv_object(request):
+    bucket = request.url.hostname
+    key = request.path_params["key"]
+
+    truck = handtruck.S3Client(
+        url="http://objects.test",
+        client=http_client,
+        access_key_id="TODO",
+        secret_access_key="TODO",
+        region="us-east-1",
+    )
+
+    resp = await truck.get(f"{bucket}/{key}")
+    return Response(resp.content, 200, resp.headers)
+
+
+serv = Starlette(
+    debug=True,
+    routes=[Route("/{key:path}", serv_object, methods=["GET"])],
 )
