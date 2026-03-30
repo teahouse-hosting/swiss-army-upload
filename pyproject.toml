@@ -58,6 +58,7 @@ follow_untyped_imports = true
 
 [tool.pytest.ini_options]
 anyio_mode = "auto"
+required_plugins = ["anyio"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -173,7 +174,7 @@ dev = [
     "pytest (>=9.0.2,<10.0.0)",
     "httpx[http2] (>=0.28.1,<0.29.0)",
     "keyrings-alt (>=5.0.2,<6.0.0)",
-    "quart (>=0.20.0,<0.21.0)",
+    "starlette (>=0.52.1,<0.53.0)",
 ]
 docs = [
     "sphinx (>=9.1.0,<10.0.0)",

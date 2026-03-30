@@ -8,6 +8,8 @@ import scr
 
 import mock_servers.teahouse
 import swiss_army_upload
+from swiss_army_upload.junk_drawer.keyring import AsyncKeyring
+from mockring import MockKeyring
 
 
 @pytest.fixture(scope="session")  # Gotta redefine this at the session level
@@ -16,7 +18,7 @@ def anyio_backend():
     return "trio"
 
 
-@pytest.fixture(scope="session", autouse="true")
+@pytest.fixture(scope="session", autouse=True)
 async def http_client(tmp_path_factory, anyio_backend):
     jar = swiss_army_upload.junk_drawer.cookiejar.SecureSavedJar(
         tmp_path_factory.mktemp("cookies") / "cookies.blob"
@@ -27,7 +29,8 @@ async def http_client(tmp_path_factory, anyio_backend):
         headers={"User-Agent": "swiss-army-upload/0.0.0"},
         follow_redirects=False,  # This causes complications in implementing auth code
         mounts={
-            # "all://*.pages": ...,
+            # "all://*.gitpages": ...,
+            # "all://*.teahouse": ...,
             "all://counter.teahouse.cafe": httpx.ASGITransport(
                 app=mock_servers.teahouse.app
             )
@@ -39,8 +42,15 @@ async def http_client(tmp_path_factory, anyio_backend):
         yield client
 
 
+@pytest.fixture(autouse=True)
+async def keyring():
+    ring = MockKeyring()
+    scr.registry.register_value(AsyncKeyring, ring, enter=False)
+    return keyring
+
+
 @pytest.fixture
-def sau_cli():
+async def sau_cli():
     """
     Invoke swiss-army-upload
     """
@@ -58,7 +68,9 @@ def sau_cli():
         try:
             await swiss_army_upload.main()
         except SystemExit as exc:
-            return subprocess.CompletedProcess(argv, exc.code)
+            return subprocess.CompletedProcess(
+                argv, exc.code if isinstance(exc.code, int) else int(bool(exc.code))
+            )
         else:
             return subprocess.CompletedProcess(argv, 0)
 

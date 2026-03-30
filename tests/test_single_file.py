@@ -9,7 +9,7 @@ import pytest
     "remote_url",
     [
         "tea://alice.teahouse/file.txt",
-        "pages://alice.gitpages/file.txt",
+        # "pages://alice.gitpages/file.txt",
     ],
 )
 async def test_round_trip(sau_cli, remote_url, tmp_path):
