@@ -10,6 +10,7 @@ from pytest_ephemeral_container import spawn_container, discover_ports, wait_for
 import scr
 
 import mock_servers.teahouse
+import mock_servers.actions
 import swiss_army_upload
 from swiss_army_upload.junk_drawer.keyring import AsyncKeyring
 from mockring import MockKeyring
@@ -91,6 +92,7 @@ async def http_client(
                 app=mock_servers.teahouse.admin
             ),
             "all://objects.test": _teahouse_objects_transport,
+            "all://oidc.test": httpx.ASGITransport(app=mock_servers.actions.oidc),
         },
     )
     mock_servers.teahouse.http_client = client
@@ -132,6 +134,11 @@ async def sau_cli():
             cp = subprocess.CompletedProcess(
                 argv, exc.code if isinstance(exc.code, int) else int(bool(exc.code))
             )
+        except (Exception, ExceptionGroup):
+            import traceback
+
+            traceback.print_exc()  # TODO: Shove into stderr
+            cp = subprocess.CompletedProcess(argv, 1)
         else:
             cp = subprocess.CompletedProcess(argv, 0)
 
@@ -143,3 +150,19 @@ async def sau_cli():
         return cp
 
     return invoke
+
+
+@pytest.fixture
+async def use_good_oidc(monkeypatch):
+    monkeypatch.setenv(
+        "ACTIONS_ID_TOKEN_REQUEST_URL", "https://oidc.test/exchange-a-key?"
+    )
+    monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "owo")
+
+
+@pytest.fixture
+async def use_bad_oidc(monkeypatch):
+    monkeypatch.setenv(
+        "ACTIONS_ID_TOKEN_REQUEST_URL", "https://oidc.test/exchange-a-key?"
+    )
+    monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "uwu")

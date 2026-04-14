@@ -64,13 +64,14 @@ class OidcTool(abc.ABC):
         except StopIteration as exc:
             # Hopefully this is redundant
             self.token = exc.value
-            raise StopAsyncIteration from None
+            return
         finally:
             self._going = False
 
     async def asend(self, resp: httpx.Response):
         if self._buffer is not None:
             raise RuntimeError("Need to iterate between sends")
+        await resp.aread()
         self._buffer = resp
 
 
@@ -98,9 +99,9 @@ class GitHubOIDC(OidcTool):
                 "Accept": "application/json",
             },
         )
+        # FIXME: Call resp.read() in synchronous contexts
         resp.raise_for_status()
-        body = resp.json()
-        return body["value"]
+        return resp.text
 
 
 PROVIDERS = [GitHubOIDC]

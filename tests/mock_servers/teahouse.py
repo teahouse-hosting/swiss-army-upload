@@ -31,6 +31,12 @@ async def get_body(request) -> T.AsyncIterator[dict]:
 def get_auth(request) -> dict | None:
     if SESSION_COOKIE in request.cookies:
         return {"email": request.cookies[SESSION_COOKIE]}
+    elif "Authorization" in request.headers:
+        auth_kind, _, token = request.headers["Authorization"].partition(" ")
+        if token == "i-am-a-valid-key":
+            return {"email": "bot@oidc"}
+        else:
+            return None
     else:
         return None
 
@@ -60,11 +66,12 @@ async def whoami(request):
         return JSONResponse(
             {"type": "anonymous", "is_authenticated": False, "name": ""}
         )
+    elif user["email"] == "bot@oidc":
+        return JSONResponse({"type": "oidc", "is_authenticated": True, "name": "beep"})
     else:
         return JSONResponse(
             {"type": "regular", "is_authenticated": True, "name": user["email"]}
         )
-    # JSONResponse({"type":"oidc","is_authenticated":True,"name":...})
 
 
 async def get_s3_config(request):
