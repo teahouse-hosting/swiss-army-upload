@@ -63,7 +63,8 @@ class OidcTool(abc.ABC):
                     yield gen.send(resp)
         except StopIteration as exc:
             # Hopefully this is redundant
-            self.token = exc.value
+            if exc.value is not None:
+                self.token = exc.value
             return
         finally:
             self._going = False
@@ -100,8 +101,8 @@ class GitHubOIDC(OidcTool):
             },
         )
         # FIXME: Call resp.read() in synchronous contexts
-        resp.raise_for_status()
-        return resp.text
+        if resp.status_code == 200:
+            return resp.text
 
 
 PROVIDERS = [GitHubOIDC]
