@@ -41,7 +41,7 @@ if sys.version_info >= (3, 14):
             getattr(pi, "_stat_result", None) or getattr(pi, "_lstat_result", None)
         ):
             # FIXME: 3.14 on Windows doesn't use stat cache
-            await anyio.to_thread.run_sync(pi._stat())
+            await anyio.to_thread.run_sync(pi._stat)
         return path.info
 
 else:
@@ -49,7 +49,7 @@ else:
 
     async def path_info(path: anyio.Path) -> P_PathInfo:
         pi = PathInfo(path)
-        await anyio.to_thread.run_sync(pi._stat())
+        await anyio.to_thread.run_sync(pi._stat)
         return pi
 
 
