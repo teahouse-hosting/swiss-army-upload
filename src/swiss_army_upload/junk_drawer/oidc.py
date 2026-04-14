@@ -63,14 +63,16 @@ class OidcTool(abc.ABC):
                     yield gen.send(resp)
         except StopIteration as exc:
             # Hopefully this is redundant
-            self.token = exc.value
-            raise StopAsyncIteration from None
+            if exc.value is not None:
+                self.token = exc.value
+            return
         finally:
             self._going = False
 
     async def asend(self, resp: httpx.Response):
         if self._buffer is not None:
             raise RuntimeError("Need to iterate between sends")
+        await resp.aread()
         self._buffer = resp
 
 
@@ -81,9 +83,9 @@ class GitHubOIDC(OidcTool):
 
     @staticmethod
     def is_available():
-        return (
-            "ACTIONS_ID_TOKEN_REQUEST_TOKEN" in os.environ
-            and "ACTIONS_ID_TOKEN_REQUEST_URL" in os.environ
+        # Sorry for the format, ruff just wants to do this
+        return os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN") and os.environ.get(
+            "ACTIONS_ID_TOKEN_REQUEST_URL"
         )
 
     def __iter__(self):
@@ -98,9 +100,9 @@ class GitHubOIDC(OidcTool):
                 "Accept": "application/json",
             },
         )
-        resp.raise_for_status()
-        body = resp.json()
-        return body["value"]
+        # FIXME: Call resp.read() in synchronous contexts
+        if resp.status_code == 200:
+            return resp.text
 
 
 PROVIDERS = [GitHubOIDC]

@@ -27,5 +27,5 @@ class SecureSavedJar(http.cookiejar.CookieJar, anyio.AsyncContextManagerMixin):
         super().__init__(policy)
 
     @asynccontextmanager
-    async def __asynccontextmanager__(self) -> typing.AsyncGenerator[typing.Self]:
+    async def __asynccontextmanager__(self) -> typing.AsyncIterator[typing.Self]:
         yield self

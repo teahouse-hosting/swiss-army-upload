@@ -4,6 +4,9 @@ import typing as T
 
 from anyio import to_thread
 import keyring
+import keyring.credentials as credentials
+
+__all__ = ("credentials", "AsyncKeyring", "get_viable_backends")
 
 
 class AsyncKeyring(abc.ABC):

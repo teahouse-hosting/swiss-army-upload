@@ -80,7 +80,7 @@ class TFile:
 
 
 @sync_to_async
-def bundle_into_tarfile(files: T.Iterable[TFile]) -> bytes:
+def bundle_into_tarfile(files: T.Iterable[TFile]) -> tuple[bytes, str]:
     """
     Builds a synthetic tar with the given entries.
 
@@ -89,15 +89,23 @@ def bundle_into_tarfile(files: T.Iterable[TFile]) -> bytes:
     Return is zstd compressed tar data.
     """
     with tempfile.TemporaryFile("wb+") as fbytes:
-        with tarfile.open(fileobj=fbytes, mode="x:zst") as ftar:
+        if sys.version_info >= (3, 14):
+            ftar = tarfile.open(fileobj=fbytes, mode="x:zst")
+            mime = "application/x-tar+zstd"
+        else:
+            ftar = tarfile.open(fileobj=fbytes, mode="x:gz")
+            mime = "application/x-tar+gzip"
+
+        with ftar:
             for inode in files:
                 ti = inode.to_tarinfo()
                 with inode.open() as fsrc:
                     ftar.addfile(ti, fsrc)
+
         fbytes.seek(0)
         tardata = fbytes.read()
         # open("debug.tar.zst", "wb").write(tardata)
-        return tardata
+        return tardata, mime
 
 
 @sync_to_async
@@ -354,7 +362,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
         project, path = await self._split(url)
         http, auth = await self.scr.aget(httpx.AsyncClient, GitPagesAuth)
-        data = await bundle_into_tarfile(
+        data, mime = await bundle_into_tarfile(
             [
                 await TFile.from_file(file, path),
             ]
@@ -364,7 +372,7 @@ class GitPagesBackend(anyio.AsyncContextManagerMixin, Backend):
             "PATCH",
             self._url(project, path="/"),
             headers={
-                "Content-Type": "application/x-tar+zstd",
+                "Content-Type": mime,
                 "Create-Parents": "yes",
                 "Atomic": "no",
             },

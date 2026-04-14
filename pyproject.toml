@@ -6,11 +6,11 @@ authors = [
     {name = "Jamie Bliss",email = "jamie@teahouse.cafe"}
 ]
 readme = "README.md"
-requires-python = ">=3.14,<4.0"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "anyio[trio] (>=4.12.0,<5.0.0)",
     "httpx[http2] (>=0.28.1,<0.29.0)",
-    "handtruck (>=0.2.0)",
+    "handtruck (>=0.3.0)",
     "dykes @ git+https://github.com/AstraLuma/dykes.git@subcommands",
     "keyring (>=25.7.0,<26.0.0)",
     # Doesn't implement get_credential(), so useless to us
@@ -56,11 +56,13 @@ follow_untyped_imports = true
 module = ["keyrings.*"]
 follow_untyped_imports = true
 
+[tool.pytest.ini_options]
+anyio_mode = "auto"
+required_plugins = ["anyio"]
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-
 
 # content below this line added by briefcase convert
 # This project was generated with 0.3.25 using template: https://github.com/beeware/briefcase-template @ v0.3.25
@@ -172,7 +174,8 @@ dev = [
     "pytest (>=9.0.2,<10.0.0)",
     "httpx[http2] (>=0.28.1,<0.29.0)",
     "keyrings-alt (>=5.0.2,<6.0.0)",
-    "flask (>=3.1.3,<4.0.0)"
+    "starlette (>=0.52.1,<0.53.0)",
+    "pytest-ephemeral-container (>=0.3.0)",
 ]
 docs = [
     "sphinx (>=9.1.0,<10.0.0)",
