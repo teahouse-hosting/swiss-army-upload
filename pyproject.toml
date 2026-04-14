@@ -6,7 +6,7 @@ authors = [
     {name = "Jamie Bliss",email = "jamie@teahouse.cafe"}
 ]
 readme = "README.md"
-requires-python = ">=3.14,<4.0"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "anyio[trio] (>=4.12.0,<5.0.0)",
     "httpx[http2] (>=0.28.1,<0.29.0)",
