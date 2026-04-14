@@ -72,7 +72,7 @@ def _teahouse_objects_transport(_teahouse_s3):
     return Transport()
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(autouse=True)
 async def http_client(
     tmp_path_factory, anyio_backend, _teahouse_objects_transport, _teahouse_s3
 ):
@@ -106,7 +106,8 @@ async def http_client(
 async def keyring():
     ring = MockKeyring()
     scr.registry.register_value(AsyncKeyring, ring, enter=False)
-    return ring
+    yield ring
+    scr.registry.register_value(AsyncKeyring, None, enter=False)
 
 
 @pytest.fixture
