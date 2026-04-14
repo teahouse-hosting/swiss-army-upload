@@ -82,9 +82,9 @@ class GitHubOIDC(OidcTool):
 
     @staticmethod
     def is_available():
-        return (
-            "ACTIONS_ID_TOKEN_REQUEST_TOKEN" in os.environ
-            and "ACTIONS_ID_TOKEN_REQUEST_URL" in os.environ
+        # Sorry for the format, ruff just wants to do this
+        return os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN") and os.environ.get(
+            "ACTIONS_ID_TOKEN_REQUEST_URL"
         )
 
     def __iter__(self):
