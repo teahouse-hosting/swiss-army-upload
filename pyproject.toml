@@ -175,7 +175,7 @@ dev = [
     "httpx[http2] (>=0.28.1,<0.29.0)",
     "keyrings-alt (>=5.0.2,<6.0.0)",
     "starlette (>=0.52.1,<0.53.0)",
-    "pytest-ephemeral-container (>=0.2.2,<0.3.0)",
+    "pytest-ephemeral-container (>=0.3.0)",
 ]
 docs = [
     "sphinx (>=9.1.0,<10.0.0)",

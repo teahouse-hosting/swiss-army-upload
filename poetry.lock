@@ -1809,14 +1809,14 @@ dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "requests
 
 [[package]]
 name = "pytest-ephemeral-container"
-version = "0.2.2"
+version = "0.3.0"
 description = "Spawn epehemeral containers in pytest"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["dev"]
 files = [
-    {file = "pytest_ephemeral_container-0.2.2-py3-none-any.whl", hash = "sha256:32bdf4e9c7ee2bdb91d0ecdc38362151ed504221d8df0ef5061f1b7eeb5095f4"},
-    {file = "pytest_ephemeral_container-0.2.2.tar.gz", hash = "sha256:561d6177c45bcc3955f531f5c90a4e4e6923cea50d26e1251a19dd8d9f4a19ca"},
+    {file = "pytest_ephemeral_container-0.3.0-py3-none-any.whl", hash = "sha256:961e5905d773b9e0437219de02f7dc177e635c51d99bf319050f34446946774e"},
+    {file = "pytest_ephemeral_container-0.3.0.tar.gz", hash = "sha256:49c78f536b7e58897957330fb0377a91c80f345d80ddae62af2af36b0520208a"},
 ]
 
 [package.dependencies]
@@ -2513,4 +2513,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "bcc9ddee7d472f705d2fa0801311ee8dce4e61158879841e28a59e5d6e21e2d9"
+content-hash = "043a9568bbbdfa771c809f87ff5c82fb3f9c321acda2f05b3103384b953de1fc"
