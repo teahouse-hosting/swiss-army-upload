@@ -8,14 +8,49 @@ import dataclasses
 import datetime
 import enum
 import posixpath
+import sys
 import typing as T
 
 import anyio
 import anyio.abc
 import anyio.streams.file
+import anyio.to_thread
 import httpx
 
 from .ahashlib import hash_stream
+
+
+class P_PathInfo(T.Protocol):
+    """Protocol for path info objects, which support querying the file type.
+    Methods may return cached results.
+    """
+
+    def exists(self, *, follow_symlinks: bool = True) -> bool: ...
+    def is_dir(self, *, follow_symlinks: bool = True) -> bool: ...
+    def is_file(self, *, follow_symlinks: bool = True) -> bool: ...
+    def is_symlink(self) -> bool: ...
+
+
+if sys.version_info >= (3, 14):
+    from pathlib.types import PathInfo
+
+    async def path_info(path: anyio.Path) -> P_PathInfo:
+        pi = path.info
+        # I think this works for 3.14 and 3.15
+        if not (
+            getattr(pi, "_stat_result", None) or getattr(pi, "_lstat_result", None)
+        ):
+            # FIXME: 3.14 on Windows doesn't use stat cache
+            await anyio.to_thread.run_sync(pi._stat())
+        return path.info
+
+else:
+    from ._pathinfo import PathInfo
+
+    async def path_info(path: anyio.Path) -> P_PathInfo:
+        pi = PathInfo(path)
+        await anyio.to_thread.run_sync(pi._stat())
+        return pi
 
 
 @dataclasses.dataclass
@@ -76,9 +111,9 @@ async def _better_walk(
         while q:
             pdir = q.popleft()
             async for file in pdir.iterdir():
-                if file.info.is_file():
+                if (await path_info(file)).is_file():
                     await stream.send(file)
-                elif file.info.is_dir():
+                elif (await path_info(file)).is_dir():
                     q.append(file)
 
 
