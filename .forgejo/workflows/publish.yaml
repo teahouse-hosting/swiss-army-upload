@@ -83,5 +83,13 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - run: poetry install
+      - name: configure registry
+        run: |
+          cat > ~/.pypirc <<EOF
+          [codeberg]
+          repository = https://codeberg.org/api/packages/teahouse/pypi
+          username = ${{ vars.PAT_USER }}
+          password = ${{ secrets.PAT_TOKEN }}
+          EOF
       - name: poetry publish
-        run: poetry publish --no-interaction --username=${{ vars.PAT_USER }} --password=${{ secrets.PAT_TOKEN }} --repository=https://codeberg.org/api/packages/teahouse/pypi --build
+        run: poetry publish --no-interaction --repository=codeberg --build
