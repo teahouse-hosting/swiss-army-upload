@@ -85,11 +85,7 @@ jobs:
       - run: poetry install
       - name: configure registry
         run: |
-          cat > ~/.pypirc <<EOF
-          [codeberg]
-          repository = https://codeberg.org/api/packages/teahouse/pypi
-          username = ${{ vars.PAT_USER }}
-          password = ${{ secrets.PAT_TOKEN }}
-          EOF
+          poetry config repositories.codeberg https://codeberg.org/api/packages/teahouse/pypi
+          poetry config http-basic.codeberg ${{ vars.PAT_USER }} ${{ secrets.PAT_TOKEN }}
       - name: poetry publish
         run: poetry publish --no-interaction --repository=codeberg --build
