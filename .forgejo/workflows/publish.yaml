@@ -85,10 +85,10 @@ jobs:
       - run: poetry install
       - run: poetry build
       - name: configure registry
-        if: forgejo.event_name == 'push' && forgejo.ref == 'refs/heads/trunk'
+        if: forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/tags/')
         run: |
           poetry config repositories.codeberg https://codeberg.org/api/packages/teahouse/pypi
           poetry config http-basic.codeberg ${{ vars.PAT_USER }} ${{ secrets.PAT_TOKEN }}
       - name: poetry publish
-        if: forgejo.event_name == 'push' && forgejo.ref == 'refs/heads/trunk'
+        if: forgejo.event_name == 'push' && startsWith(forgejo.ref, 'refs/tags/')
         run: poetry publish --no-interaction --repository=codeberg
