@@ -1,6 +1,6 @@
 [project]
 name = "swiss-army-upload"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Interact with multiple web hosts"
 authors = [
     {name = "Jamie Bliss",email = "jamie@teahouse.cafe"}
@@ -30,11 +30,6 @@ source = "https://codeberg.org/teahouse/swiss-army-upload"
 swiss-army-upload = 'swiss_army_upload:entrypoint'
 sau = 'swiss_army_upload:entrypoint'
 
-[tool.poetry]
-packages = [
-    {include = "swiss_army_upload", from = "src"}
-]
-
 [project.entry-points."swiss_army_upload.backend"]
 # Teahouse Hosting, https://teahouse.cafe/
 tea = "swiss_army_upload.backends.teahouse:TeahouseBackend"
@@ -44,6 +39,35 @@ pages = "swiss_army_upload.backends.gitpages:GitPagesBackend"
 # neko = "swiss_army_upload.backends.nekoweb"
 # Neocities, https://neocities.org/
 # neo = "swiss_army_upload.backends.neocities"
+
+[dependency-groups]
+dev = [
+    "mypy (>=1.19.0,<2.0.0)",
+    "pytest (>=9.0.2,<10.0.0)",
+    "httpx[http2] (>=0.28.1,<0.29.0)",
+    "keyrings-alt (>=5.0.2,<6.0.0)",
+    "starlette (>=0.52.1,<0.53.0)",
+    "pytest-ephemeral-container (>=0.3.0)",
+]
+docs = [
+    "sphinx (>=9.1.0,<10.0.0)",
+    "sphinxext-opengraph[social-cards] (>=0.13.0,<0.14.0)",
+    "sphinx-autobuild (>=2025.8.25,<2026.0.0)",
+    "sphinx-rtd-theme (>=3.1.0,<4.0.0)"
+]
+
+[tool.poetry]
+packages = [
+    {include = "swiss_army_upload", from = "src"}
+]
+version = "0.0.0"
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
+[tool.poetry-dynamic-versioning]
+enable = true
+bump = true
 
 [tool.mypy]
 check_untyped_defs = true
@@ -61,7 +85,7 @@ anyio_mode = "auto"
 required_plugins = ["anyio"]
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=2.0.0,<3.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 # content below this line added by briefcase convert
@@ -166,20 +190,3 @@ supported = false
 # Web deployments
 [tool.briefcase.app.swiss-army-upload.web]
 supported = false
-
-
-[dependency-groups]
-dev = [
-    "mypy (>=1.19.0,<2.0.0)",
-    "pytest (>=9.0.2,<10.0.0)",
-    "httpx[http2] (>=0.28.1,<0.29.0)",
-    "keyrings-alt (>=5.0.2,<6.0.0)",
-    "starlette (>=0.52.1,<0.53.0)",
-    "pytest-ephemeral-container (>=0.3.0)",
-]
-docs = [
-    "sphinx (>=9.1.0,<10.0.0)",
-    "sphinxext-opengraph[social-cards] (>=0.13.0,<0.14.0)",
-    "sphinx-autobuild (>=2025.8.25,<2026.0.0)",
-    "sphinx-rtd-theme (>=3.1.0,<4.0.0)"
-]
