@@ -102,7 +102,7 @@ class GitHubOIDC(OidcTool):
         )
         # FIXME: Call resp.read() in synchronous contexts
         if resp.status_code == 200:
-            return resp.text
+            return resp.json().get("value")
 
 
 PROVIDERS = [GitHubOIDC]

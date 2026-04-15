@@ -3,7 +3,7 @@ Mock server for actions-like OIDC
 """
 
 from starlette.applications import Starlette
-from starlette.responses import PlainTextResponse
+from starlette.responses import PlainTextResponse, JSONResponse
 from starlette.routing import Route
 
 
@@ -16,7 +16,7 @@ async def key_xchange(request):
         return PlainTextResponse("Unknown Authorization", 400)
 
     if token == "owo":
-        return PlainTextResponse("i-am-a-valid-key", 200)
+        return JSONResponse({"value": "i-am-a-valid-key"}, 200)
     elif token == "uwu":
         return PlainTextResponse("Invalid auth", 403)
     else:
