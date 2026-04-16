@@ -4,6 +4,7 @@ Generic tests on single files
 
 import random
 
+import httpx
 import pytest
 
 
@@ -72,3 +73,28 @@ async def test_publishes(
     resp = await http_client.get(result_url)
     resp.raise_for_status()
     assert resp.text == data
+
+
+@pytest.mark.parametrize(
+    "upload_url,mimetype",
+    [
+        (httpx.URL("tea://gabi.teahouse/file.txt"), "text/plain"),
+        (httpx.URL("tea://gabi.teahouse/file.html"), "text/html"),
+    ],
+)
+async def test_type_fingerprint(
+    keyring, sau_cli, tmp_path, http_client, upload_url, mimetype
+):
+    await keyring.set_password(
+        "counter.teahouse.cafe", "alice@valid.test", "sweet little angel"
+    )
+    file_path = tmp_path / upload_url.path.lstrip("/")
+    data = "No slop no cops no feds no fash"
+    file_path.write_text(data)
+    await sau_cli(["put", file_path, str(upload_url)], check=True)
+
+    result_url = upload_url.copy_with(scheme="https")
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
+    assert resp.headers["Content-Type"] == mimetype

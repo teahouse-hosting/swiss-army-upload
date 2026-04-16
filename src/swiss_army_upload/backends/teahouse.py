@@ -24,6 +24,7 @@ from ..junk_drawer.keyring import AsyncKeyring
 from ..junk_drawer import rsync
 from ..junk_drawer.sync import sync_to_async
 from ..junk_drawer.oidc import oidc_tool
+from ..junk_drawer.typefinger import fingerprint_file
 
 
 LOG = logging.getLogger(__name__)
@@ -359,7 +360,8 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
 
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
         client, s3url = await self._munge_url(url)
-        await client.put_file_multipart(s3url, os.fspath(file))
+        headers = {"Content-Type": await fingerprint_file(file)}
+        await client.put_file_multipart(s3url, os.fspath(file), headers=headers)
 
     async def _delete_object(self, url: httpx.URL):
         client, s3url = await self._munge_url(url)
