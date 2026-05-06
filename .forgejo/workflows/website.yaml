@@ -50,14 +50,13 @@ jobs:
     enable-openid-connect: true
     needs:
       - build
+    if: forgejo.ref == 'refs/heads/trunk'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
       - uses: actions/download-artifact@v3
         with:
           name: website
           path: ./docs/_output
-      - uses: .
+      - uses: https://codeberg.org/teahouse/swiss-army-upload.git@trunk
         with:
           src: ./docs/_output
           dest: tea://swiss-army-upload.teahouse.cafe/stable/
