@@ -132,14 +132,25 @@ async def sau_cli():
         try:
             await swiss_army_upload.main()
         except SystemExit as exc:
+            if not isinstance(exc.code, int):
+                print(exc.code, file=sys.stderr, flush=True)
             cp = subprocess.CompletedProcess(
                 argv, exc.code if isinstance(exc.code, int) else int(bool(exc.code))
             )
-        except (Exception, ExceptionGroup):
-            import traceback
-
-            traceback.print_exc()  # TODO: Shove into stderr
+            if check and cp.returncode:
+                raise subprocess.CalledProcessError(
+                    cp.returncode, cp.args, output=None, stderr=None
+                ) from exc
+        except (Exception, ExceptionGroup) as exc:
             cp = subprocess.CompletedProcess(argv, 1)
+            if check and cp.returncode:
+                raise subprocess.CalledProcessError(
+                    cp.returncode, cp.args, output=None, stderr=None
+                ) from exc
+            else:
+                import traceback
+
+                traceback.print_exc()  # TODO: Shove into stderr
         else:
             cp = subprocess.CompletedProcess(argv, 0)
 
