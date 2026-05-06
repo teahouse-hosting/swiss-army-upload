@@ -1,0 +1,63 @@
+name: Publish Website
+
+on:
+  push:
+    branches: [ "trunk" ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ "trunk" ]
+  workflow_dispatch:
+
+
+concurrency:
+  group: "teahouse"
+  cancel-in-progress: false
+
+jobs:
+  # Build job
+  build:
+    runs-on: codeberg-medium
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: install poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: install python
+        uses: https://github.com/actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: 'poetry'
+      - run: poetry install
+
+      - name: Build the site
+        run: |
+          poetry run sphinx-build -b html "docs" "docs/_output" --verbose
+      - uses: actions/upload-artifact@v3.2.2
+        with:
+          name: website
+          path: ./docs/_output
+
+  # Deployment job
+  deploy:
+    environment:
+      name: teahouse
+      url: https://swiss-army-upload.teahouse.cafe
+    runs-on: codeberg-medium
+    enable-openid-connect: true
+    needs:
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
+        with:
+          name: website
+          path: ./docs/_output
+      - uses: .
+        with:
+          src: ./docs/_output
+          dest: tea://swiss-army-upload.teahouse.cafe/stable/

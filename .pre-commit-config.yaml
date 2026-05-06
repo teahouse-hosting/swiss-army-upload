@@ -17,6 +17,6 @@ repos:
   # Run the formatter.
   - id: ruff-format
 - repo: https://code.forgejo.org/forgejo/runner
-  rev: v11.1.1
+  rev: v12.10.1
   hooks:
     - id: forgejo-runner-validate
