@@ -262,15 +262,19 @@ class TeahouseSync(rsync.SyncEngine):
         """
         async with stream:
             client, path = await self._munge_url(url)
-            async for page in client.list_objects_v2(path):
-                for meta in page:
-                    await stream.send(
-                        rsync.RFileMeta(
-                            name=meta.key,
-                            size=meta.size,
-                            mtime=meta.last_modified,
+            try:
+                async for page in client.list_objects_v2(path):
+                    for meta in page:
+                        await stream.send(
+                            rsync.RFileMeta(
+                                name=meta.key,
+                                size=meta.size,
+                                mtime=meta.last_modified,
+                            )
                         )
-                    )
+            except handtruck.exceptions.NoSuchKey:
+                # Means this doesn't exist and there's no contents
+                pass
 
     async def fill_remote_meta(
         self, url: httpx.URL, meta: rsync.RFileMeta, field_hints: list[str]
@@ -336,7 +340,7 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
         if url.path == "/":
             return client, creds.bucket
         else:
-            return client, f"{creds.bucket}/{url.path.lstrip('/')}"
+            return client, httpx.URL("", scheme="s3", host=creds.bucket, path=url.path)
 
     async def is_file(self, url: httpx.URL) -> bool:
         assert url.scheme == "tea"
