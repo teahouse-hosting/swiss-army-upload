@@ -47,11 +47,14 @@ def _path_or_url(arg: str) -> httpx.URL | anyio.Path:
 
 
 def parse_args(args: list[str] | None = None) -> CliArgs:
+    opts: dict[str, T.Any] = {}
+    if sys.version_info >= (3, 14):
+        opts |= {"suggest_on_error": True}
     parser = argparse.ArgumentParser(
         description="""
 Upload to a variety of web hosts
 """,
-        suggest_on_error=True,
+        **opts,
     )
 
     subs = parser.add_subparsers(dest="command", required=True)
@@ -59,7 +62,7 @@ Upload to a variety of web hosts
     p_login = subs.add_parser(
         "login",
         help="Log in to a provider",
-        suggest_on_error=True,
+        **opts,
         description="""
 Log in to a provider.
 
@@ -75,7 +78,7 @@ Note that support for multiple credentials to the same provider will vary.
 
     p_get = subs.add_parser(
         "get",
-        suggest_on_error=True,
+        **opts,
         help="Download a file",
         description="""
 Download a file.
@@ -88,7 +91,7 @@ Both the source and the destination must include the file name.
 
     p_put = subs.add_parser(
         "put",
-        suggest_on_error=True,
+        **opts,
         help="Upload a file",
         description="""
 Upload a file
@@ -101,7 +104,7 @@ Both the source and the destination must include the file name.
 
     p_sync = subs.add_parser(
         "sync",
-        suggest_on_error=True,
+        **opts,
         help="Synchronize one directory to another",
         description="""
 Synchronize one directory to another.
