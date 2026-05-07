@@ -247,7 +247,7 @@ class TeahouseSync(rsync.SyncEngine):
     def __init__(self, backend: TeahouseBackend):
         self.backend = backend
 
-    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
+    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, httpx.URL]:
         return await self.backend._munge_url(url)
 
     async def iter_remote(
@@ -333,14 +333,11 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             if not credentials_ok:
                 console.print("Unable to confirm credentials; try again")
 
-    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
+    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, httpx.URL]:
         http = await self.scr.aget(httpx.AsyncClient)
         creds = await self._creds.get(url.host)
         client = handtruck.S3Client(url=creds.endpoint, client=http, credentials=creds)
-        if url.path == "/":
-            return client, creds.bucket
-        else:
-            return client, httpx.URL("", scheme="s3", host=creds.bucket, path=url.path)
+        return client, httpx.URL("", scheme="s3", host=creds.bucket, path=url.path)
 
     async def is_file(self, url: httpx.URL) -> bool:
         assert url.scheme == "tea"
