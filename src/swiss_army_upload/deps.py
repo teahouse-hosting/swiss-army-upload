@@ -2,6 +2,7 @@
 saucer/svcs definitions
 """
 
+import argparse
 import contextlib
 import dataclasses
 import http.cookiejar
@@ -22,11 +23,15 @@ LOG = logging.getLogger(__name__)
 SCR_ATTR = "__scr_container"
 
 
-# I'd like this to filter for CLI param classes, but that's circular
 @scr.scr_from.register
 def _(ctx: object):
     if not dataclasses.is_dataclass(ctx):
         raise NotImplementedError
+    return getattr(ctx, SCR_ATTR)
+
+
+@scr.scr_from.register
+def _(ctx: argparse.Namespace):
     return getattr(ctx, SCR_ATTR)
 
 
@@ -103,7 +108,7 @@ scr.registry.register_factory(rich.console.Console, rich.console.Console, enter=
 
 @contextlib.asynccontextmanager
 async def enter_container(*objects) -> T.AsyncIterator[scr.Container]:
-    async with scr.root.afork() as ctr:
+    async with scr.root as ctr:
         for obj in objects:
             setattr(obj, SCR_ATTR, ctr)
         yield ctr

@@ -558,22 +558,6 @@ files = [
 ]
 
 [[package]]
-name = "dykes"
-version = "0.0.0"
-description = "A tiny declarative Argparse wrapper."
-optional = false
-python-versions = ">=3.12,<4.0"
-groups = ["main"]
-files = []
-develop = false
-
-[package.source]
-type = "git"
-url = "https://github.com/AstraLuma/dykes.git"
-reference = "subcommands"
-resolved_reference = "7dd3db19da14615ef3167d54a5f50c8101d721a2"
-
-[[package]]
 name = "fonttools"
 version = "4.61.1"
 description = "Tools to manipulate font files"
@@ -1936,25 +1920,6 @@ files = [
 ]
 
 [[package]]
-name = "saucer"
-version = "0.1.dev619"
-description = "A Flexible Service Locator"
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-files = []
-develop = false
-
-[package.dependencies]
-attrs = ">=21.3.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/AstraLuma/svcs.git"
-reference = "saucer"
-resolved_reference = "95ff62fc94be609e66d06fc3c9006e74d9496631"
-
-[[package]]
 name = "secretstorage"
 version = "3.5.0"
 description = "Python bindings to FreeDesktop.org Secret Service API"
@@ -2248,6 +2213,27 @@ typing-extensions = {version = ">=4.10.0", markers = "python_version < \"3.13\""
 full = ["httpx (>=0.27.0,<0.29.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.18)", "pyyaml"]
 
 [[package]]
+name = "svcs"
+version = "25.1.0"
+description = "A Flexible Service Locator"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "svcs-25.1.0-py3-none-any.whl", hash = "sha256:df49cb7d1a05dfd2dd60af1a2cb84b9c3bb0a74728833cb8c54a7ceeecce6c97"},
+    {file = "svcs-25.1.0.tar.gz", hash = "sha256:64dd74d0c4e8fee79a9ac7550a9d824670b228df390ba1911614e29b59b3f2c2"},
+]
+
+[package.dependencies]
+attrs = ">=21.3.0"
+
+[package.extras]
+dev = ["aiohttp", "fastapi", "flask", "httpx", "mypy (>=1.4)", "pyramid", "pytest", "pytest-asyncio", "starlette", "sybil (>=6)", "tox (>4)", "tox-uv"]
+docs = ["aiohttp", "fastapi", "flask", "furo (>=2023.8.17)", "httpx", "myst-parser", "pyramid", "pytest", "pytest-asyncio", "sphinx (>=7.2.2)", "sphinx-copybutton", "sphinx-design", "sphinx-notfound-page", "sphinxext-opengraph", "sqlalchemy", "starlette", "sybil"]
+tests = ["pytest", "pytest-asyncio", "sybil (>=6)"]
+typing = ["aiohttp", "fastapi", "flask", "mypy (>=1.4)", "pyramid", "starlette"]
+
+[[package]]
 name = "trio"
 version = "0.32.0"
 description = "A friendly Python library for async concurrency and I/O"
@@ -2513,4 +2499,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "043a9568bbbdfa771c809f87ff5c82fb3f9c321acda2f05b3103384b953de1fc"
+content-hash = "6acc3a288bab865fcf90806dee1c9f7f360aab61d5ad2edf35478506d0f3844e"

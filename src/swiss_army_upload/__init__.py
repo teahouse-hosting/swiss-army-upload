@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import argparse
+from enum import Enum
 import logging
 import logging.config
 from pathlib import Path
@@ -6,7 +7,6 @@ import sys
 import typing as T
 
 import anyio
-import dykes
 import httpx
 import rich.logging
 import scr
@@ -18,71 +18,128 @@ from .deps import enter_container
 LOG = logging.getLogger(__name__)
 
 
-@dataclass
-class LoginCmd:
-    """
-    Log in to a provider.
-
-    Any of the following forms are allowed:
-    * Just a name (tea)
-    * A URL stub (tea:, tea://)
-    * A URL base (tea://mysite.example)
-
-    Note that support for multiple credentials to the same provider will vary.
-    """
-
-    url: T.Annotated[httpx.URL, "URL to log in to"]
+class ExcludeSpecial(Enum):
+    Nothing = "NOTHING"
+    Default = "DEFAULT"
 
 
-@dataclass
-class GetCmd:
-    """
-    Download a file.
+# Is actually a protocol, but isn't for Reasons:tm:
+class CliArgs:
+    command: str
 
-    Both the source and the destination must include the file name.
-    """
+    # Copy commands
+    src: httpx.URL | anyio.Path
+    dest: httpx.URL | anyio.Path
+    exclusions: list[str | anyio.Path | ExcludeSpecial]
 
-    src: T.Annotated[httpx.URL, "URL to read from"]
-    dest: T.Annotated[Path, "Path to write to"]
-
-
-@dataclass
-class PutCmd:
-    """
-    Upload a file
-
-    Both the source and the destination must include the file name.
-    """
-
-    src: T.Annotated[Path, "Path to read from"]
-    dest: T.Annotated[httpx.URL, "URL to write to"]
+    # login
+    url: httpx.URL
 
 
-@dataclass
-class SyncCmd:
-    """
-    Synchronize one directory to another.
-
-    No implicit names are added to the end of the destination path.
-    """
-
-    src: T.Annotated[str, "Path or URL to read from"]
-    dest: T.Annotated[str, "URL or path to write to"]
+def _path_or_url(arg: str) -> httpx.URL | anyio.Path:
+    # In this context, all the URLs given should have schemes
+    if ":" in arg:
+        # FIXME: Windows absolute paths
+        url = httpx.URL(arg)
+        if url.scheme:
+            return url
+    return anyio.Path(arg)
 
 
-@dataclass
-class SAUArgs:
-    """
-    Upload to a variety of web hosts
-    """
+def parse_args(args: list[str] | None = None) -> CliArgs:
+    opts: dict[str, T.Any] = {}
+    if sys.version_info >= (3, 14):
+        opts |= {"suggest_on_error": True}
+    parser = argparse.ArgumentParser(
+        description="""
+Upload to a variety of web hosts
+""",
+        **opts,
+    )
 
-    login: dykes.Subparser[LoginCmd] = None
-    get: dykes.Subparser[GetCmd] = None
-    put: dykes.Subparser[PutCmd] = None
-    sync: dykes.Subparser[SyncCmd] = None
+    subs = parser.add_subparsers(dest="command", required=True)
+
+    p_login = subs.add_parser(
+        "login",
+        help="Log in to a provider",
+        **opts,
+        description="""
+Log in to a provider.
+
+Any of the following forms are allowed:
+* Just a name (tea)
+* A URL stub (tea:, tea://)
+* A URL base (tea://mysite.example)
+
+Note that support for multiple credentials to the same provider will vary.
+""",
+    )
+    p_login.add_argument("url", type=httpx.URL, help="URL to log in to")
+
+    p_get = subs.add_parser(
+        "get",
+        **opts,
+        help="Download a file",
+        description="""
+Download a file.
+
+Both the source and the destination must include the file name.
+""",
+    )
+    p_get.add_argument("src", type=httpx.URL, help="URL to read from")
+    p_get.add_argument("dest", type=anyio.Path, help="Path to write to")
+
+    p_put = subs.add_parser(
+        "put",
+        **opts,
+        help="Upload a file",
+        description="""
+Upload a file
+
+Both the source and the destination must include the file name.
+""",
+    )
+    p_put.add_argument("src", type=anyio.Path, help="Path to read from")
+    p_put.add_argument("dest", type=httpx.URL, help="URL to write to")
+
+    p_sync = subs.add_parser(
+        "sync",
+        **opts,
+        help="Synchronize one directory to another",
+        description="""
+Synchronize one directory to another.
+
+No implicit names are added to the end of the destination path.
+""",
+    )
+    p_sync.add_argument("src", type=_path_or_url, help="Path or URL to read from")
+    p_sync.add_argument("dest", type=_path_or_url, help="URL or Path to write to")
+    p_sync.add_argument(
+        "--exclude",
+        action="append",
+        dest="exclusions",
+        metavar="PATH",
+        default=[ExcludeSpecial.Default],
+        help="Exclude the given file/directory",
+    )
+    # p_sync.add_argument("--ignore-file", action="append", dest="exclusions", metavar="PATH", type=anyio.Path, help="Read and use an ignore file")
+    p_sync.add_argument(
+        "--exclude-nothing",
+        action="append_const",
+        dest="exclusions",
+        const=ExcludeSpecial.Nothing,
+        help="Disable exclusions, including implied ones",
+    )
+
+    pargs = parser.parse_args(args)
+    return T.cast(CliArgs, pargs)
 
 
-async def do_login(args: LoginCmd):
+scr.registry.register_factory(CliArgs, parse_args)
+
+
+async def do_login(svc: scr.Container):
+    args = await svc.aget(CliArgs)
     if not args.url.scheme:
         assert not args.url.host
         args.url = httpx.URL(scheme=args.url.path)
@@ -100,27 +157,34 @@ async def do_login(args: LoginCmd):
         await backend.prompt_for_credentials(args.url)
 
 
-async def do_get(args: GetCmd):
-    async with get_backend(args, args.src) as backend:
-        await backend.get_to_file(args.src, args.dest)
+async def do_get(svc: scr.Container):
+    args = await svc.aget(CliArgs)
+    usrc = T.cast(httpx.URL, args.src)
+    pdest = T.cast(anyio.Path, args.dest)
+    async with get_backend(args, usrc) as backend:
+        await backend.get_to_file(usrc, pdest)
 
 
-async def do_put(args: PutCmd):
-    async with get_backend(args, args.dest) as backend:
-        await backend.put_from_file(args.src, args.dest)
+async def do_put(svc: scr.Container):
+    args = await svc.aget(CliArgs)
+    src = T.cast(Path, args.src)
+    dest = T.cast(httpx.URL, args.dest)
+    async with get_backend(args, dest) as backend:
+        await backend.put_from_file(src, dest)
 
 
-async def do_sync(args: SyncCmd):
-    surl = httpx.URL(args.src)
-    durl = httpx.URL(args.dest)
-    try:
+async def do_sync(svc: scr.Container):
+    args = await svc.aget(CliArgs)
+    if isinstance(args.src, httpx.URL):
+        surl: httpx.URL = args.src
         sbe = get_backend(args, surl)
-    except UnknownURLError:
+    else:
         sbe = None
 
-    try:
+    if isinstance(args.dest, httpx.URL):
+        durl: httpx.URL = args.dest
         dbe = get_backend(args, durl)
-    except UnknownURLError:
+    else:
         dbe = None
 
     if sbe is not None and dbe is not None:
@@ -129,10 +193,14 @@ async def do_sync(args: SyncCmd):
         sys.exit("One of source or destination must be a remote path")
     elif sbe is None:
         async with T.cast(Backend, dbe):
-            await T.cast(Backend, dbe).rsync_up(Path(args.src), durl, delete=True)
+            await T.cast(Backend, dbe).rsync_up(
+                T.cast(Path, args.src), durl, delete=True
+            )
     elif dbe is None:
         async with T.cast(Backend, sbe):
-            await T.cast(Backend, sbe).rsync_down(surl, Path(args.dest), delete=True)
+            await T.cast(Backend, sbe).rsync_down(
+                surl, T.cast(Path, args.dest), delete=True
+            )
     else:
         assert False, "Shouldn't get here"
 
@@ -147,25 +215,22 @@ def flatten_excetions[E: Exception](grp: ExceptionGroup[E]) -> T.Iterable[E]:
 
 async def main():
     async with scr.ainit():
-        args = dykes.parse_args(SAUArgs)
+        args = await scr.root.aget(CliArgs)
 
         retval = 0
         try:
-            if args.login is not None:
-                async with enter_container(args, args.login):
-                    await do_login(args.login)
-            elif args.get is not None:
-                async with enter_container(args, args.get):
-                    await do_get(args.get)
-            elif args.put is not None:
-                async with enter_container(args, args.put):
-                    await do_put(args.put)
-            elif args.sync is not None:
-                async with enter_container(args, args.sync):
-                    await do_sync(args.sync)
-            else:
-                # FIXME: Print usage
-                sys.exit("No command specified")
+            async with enter_container(args):
+                if args.command == "login":
+                    await do_login(scr.root)
+                elif args.command == "get":
+                    await do_get(scr.root)
+                elif args.command == "put":
+                    await do_put(scr.root)
+                elif args.command == "sync":
+                    await do_sync(scr.root)
+                else:
+                    # FIXME: Print usage
+                    sys.exit("No command specified")
         except* UnknownURLError as egrp:
             for uue in flatten_excetions(egrp):
                 LOG.error("%s", str(uue.args[0]))
