@@ -18,6 +18,7 @@ import anyio.to_thread
 import httpx
 
 from .ahashlib import hash_stream
+from .ignores import IgnoreEngine
 
 
 class P_PathInfo(T.Protocol):
@@ -151,6 +152,8 @@ class SyncEngine(abc.ABC):
     #: Suggested RFileMeta fields to request
     attrs_to_get: list[str]
 
+    ignore_engine: IgnoreEngine
+
     @abc.abstractmethod
     async def iter_remote(
         self, url: httpx.URL, stream: anyio.abc.UnreliableObjectSendStream[RFileMeta]
@@ -236,6 +239,9 @@ class SyncEngine(abc.ABC):
         """
         Do all the metadata work, and produce a stream of operations.
         """
+        include = (
+            self.ignore_engine if hasattr(self, "ignore_engine") else lambda _: True
+        )
         async with ops:
             if isinstance(source, anyio.Path):
                 local_root: anyio.Path = T.cast(anyio.Path, source)
@@ -264,41 +270,50 @@ class SyncEngine(abc.ABC):
             only_remote = remote_files - local_files
             only_local = local_files - remote_files
 
+            d: httpx.URL | anyio.Path
+            s: httpx.URL | anyio.Path
+
             for name in only_remote:
                 meta = remote_metas[name]
-                await ops.send(
-                    Operation(
-                        op=Op.DELETE if local2remote else Op.CREATE,
-                        src=(
-                            local_root / meta.name
-                            if local2remote
-                            else _url_join(remote_root, meta.name)
-                        ),
-                        dest=(
-                            _url_join(remote_root, meta.name)
-                            if local2remote
-                            else local_root / meta.name
-                        ),
-                    )
+                s = (
+                    local_root / meta.name
+                    if local2remote
+                    else _url_join(remote_root, meta.name)
                 )
+                d = (
+                    _url_join(remote_root, meta.name)
+                    if local2remote
+                    else local_root / meta.name
+                )
+                if include(s):
+                    await ops.send(
+                        Operation(
+                            op=Op.DELETE if local2remote else Op.CREATE,
+                            src=s,
+                            dest=d,
+                        )
+                    )
 
             for name in only_local:
                 meta = local_metas[name]
-                await ops.send(
-                    Operation(
-                        op=Op.CREATE if local2remote else Op.DELETE,
-                        src=(
-                            local_root / meta.name
-                            if local2remote
-                            else _url_join(remote_root, meta.name)
-                        ),
-                        dest=(
-                            _url_join(remote_root, meta.name)
-                            if local2remote
-                            else local_root / meta.name
-                        ),
-                    )
+                s = (
+                    local_root / meta.name
+                    if local2remote
+                    else _url_join(remote_root, meta.name)
                 )
+                d = (
+                    _url_join(remote_root, meta.name)
+                    if local2remote
+                    else local_root / meta.name
+                )
+                if include(s):
+                    await ops.send(
+                        Operation(
+                            op=Op.CREATE if local2remote else Op.DELETE,
+                            src=s,
+                            dest=d,
+                        )
+                    )
 
             # Third, do annoying metadata stuff
             async def _deep_comparison(name):
@@ -313,21 +328,24 @@ class SyncEngine(abc.ABC):
 
                 if not _intersect_eq(rmeta.populated(), lmeta.populated()):
                     # Mismatch in the easy stuff
-                    await ops.send(
-                        Operation(
-                            op=Op.UPDATE,
-                            src=(
-                                local_root / lmeta.name
-                                if local2remote
-                                else _url_join(remote_root, rmeta.name)
-                            ),
-                            dest=(
-                                _url_join(remote_root, rmeta.name)
-                                if local2remote
-                                else local_root / lmeta.name
-                            ),
-                        )
+                    s = (
+                        local_root / lmeta.name
+                        if local2remote
+                        else _url_join(remote_root, rmeta.name)
                     )
+                    d = (
+                        _url_join(remote_root, rmeta.name)
+                        if local2remote
+                        else local_root / lmeta.name
+                    )
+                    if include(s):
+                        await ops.send(
+                            Operation(
+                                op=Op.UPDATE,
+                                src=s,
+                                dest=d,
+                            )
+                        )
                     return
 
                 # Ok, so we need to do the expensive stuff
@@ -347,21 +365,24 @@ class SyncEngine(abc.ABC):
 
                 if not _intersect_eq(rmeta.populated(), lmeta.populated()):
                     # Mismatch on the hard stuff
-                    await ops.send(
-                        Operation(
-                            op=Op.UPDATE,
-                            src=(
-                                local_root / meta.name
-                                if local2remote
-                                else _url_join(remote_root, meta.name)
-                            ),
-                            dest=(
-                                _url_join(remote_root, meta.name)
-                                if local2remote
-                                else local_root / meta.name
-                            ),
-                        )
+                    s = (
+                        local_root / meta.name
+                        if local2remote
+                        else _url_join(remote_root, meta.name)
                     )
+                    d = (
+                        _url_join(remote_root, meta.name)
+                        if local2remote
+                        else local_root / meta.name
+                    )
+                    if include(s):
+                        await ops.send(
+                            Operation(
+                                op=Op.UPDATE,
+                                src=s,
+                                dest=d,
+                            )
+                        )
                     return
 
             in_both = remote_files & local_files
