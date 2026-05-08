@@ -65,7 +65,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   pypi:
-    runs-on: codeberg-small-lazy
+    runs-on: codeberg-tiny-lazy
     if: forgejo.event_name != 'schedule'
     permissions:
       contents: read
