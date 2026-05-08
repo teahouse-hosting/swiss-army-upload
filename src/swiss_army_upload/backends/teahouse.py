@@ -247,7 +247,7 @@ class TeahouseSync(rsync.SyncEngine):
     def __init__(self, backend: TeahouseBackend):
         self.backend = backend
 
-    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
+    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, httpx.URL]:
         return await self.backend._munge_url(url)
 
     async def iter_remote(
@@ -262,15 +262,19 @@ class TeahouseSync(rsync.SyncEngine):
         """
         async with stream:
             client, path = await self._munge_url(url)
-            async for page in client.list_objects_v2(path):
-                for meta in page:
-                    await stream.send(
-                        rsync.RFileMeta(
-                            name=meta.key,
-                            size=meta.size,
-                            mtime=meta.last_modified,
+            try:
+                async for page in client.list_objects_v2(path):
+                    for meta in page:
+                        await stream.send(
+                            rsync.RFileMeta(
+                                name=meta.key,
+                                size=meta.size,
+                                mtime=meta.last_modified,
+                            )
                         )
-                    )
+            except handtruck.exceptions.NoSuchKey:
+                # Means this doesn't exist and there's no contents
+                pass
 
     async def fill_remote_meta(
         self, url: httpx.URL, meta: rsync.RFileMeta, field_hints: list[str]
@@ -329,14 +333,11 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
             if not credentials_ok:
                 console.print("Unable to confirm credentials; try again")
 
-    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, str]:
+    async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, httpx.URL]:
         http = await self.scr.aget(httpx.AsyncClient)
         creds = await self._creds.get(url.host)
         client = handtruck.S3Client(url=creds.endpoint, client=http, credentials=creds)
-        if url.path == "/":
-            return client, creds.bucket
-        else:
-            return client, f"{creds.bucket}/{url.path.lstrip('/')}"
+        return client, httpx.URL("", scheme="s3", host=creds.bucket, path=url.path)
 
     async def is_file(self, url: httpx.URL) -> bool:
         assert url.scheme == "tea"
