@@ -57,7 +57,8 @@ docs = [
 
 [tool.poetry]
 packages = [
-    {include = "swiss_army_upload", from = "src"}
+    {include = "swiss_army_upload", from = "src"},
+    {include = "scr.py", from = "src"},
 ]
 version = "0.0.0"
 
