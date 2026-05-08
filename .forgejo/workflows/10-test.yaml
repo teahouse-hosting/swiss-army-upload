@@ -32,7 +32,7 @@ jobs:
           poetry run pytest --verbose
 
   mypy:
-    runs-on: codeberg-tiny
+    runs-on: codeberg-small
     steps:
       - name: checkout-code
         uses: https://data.forgejo.org/actions/checkout@v4
