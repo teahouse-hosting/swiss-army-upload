@@ -133,8 +133,12 @@ async def serv_object(request):
         region="us-east-1",
     )
 
-    resp = await truck.get(f"{bucket}/{key}")
-    return Response(resp.content, 200, resp.headers)
+    try:
+        resp = await truck.get(f"{bucket}/{key}")
+    except handtruck.exceptions.NoSuchKey:
+        return Response(b"", 404)
+    else:
+        return Response(resp.content, 200, resp.headers)
 
 
 serv = Starlette(

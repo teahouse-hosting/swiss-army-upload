@@ -1,4 +1,5 @@
 import http.cookiejar
+import logging
 import os
 import subprocess
 import sys
@@ -14,6 +15,12 @@ import mock_servers.actions
 import swiss_army_upload
 from swiss_army_upload.junk_drawer.keyring import AsyncKeyring
 from mockring import MockKeyring
+
+
+@pytest.fixture(autouse=True)
+def _logging(caplog):
+    caplog.set_level(logging.INFO, logger="httpcore")
+    caplog.set_level(logging.INFO, logger="handtruck")
 
 
 @pytest.fixture(scope="session")  # Gotta redefine this at the session level
