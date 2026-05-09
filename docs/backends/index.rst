@@ -7,7 +7,6 @@ Supported Services
 Swiss Army Upload supports a variety of static hosting providers.
 
 .. toctree::
-   :hidden:
 
    teahouse
    git-pages
@@ -22,28 +21,28 @@ Swiss Army Upload supports a variety of static hosting providers.
      - :ref:`Files Get/Put <cmd-files>`
      - :ref:`Folder Sync <cmd-dirs>`
      - :ref:`HTTP Redirects <redirects>`
-     - :ref:`Custom Headers <>`
+     - :ref:`Custom Headers <headers>`
    * - :ref:`backend-teahouse`
      - ``tea://``
      - ✅
      - ✅
-     - ✅
-     - ✅
+     - ✏️
+     - ✏️
    * - :ref:`backend-gitpages`
      - ``pages://``
      - ✅
-     - ✅
-     - ✅
-     - ✅
+     - ✏️
+     - ✏️
+     - ✏️
    * - :ref:`Neocities <backend-neocities>`
      - ``neo://``
-     - ❌
-     - ❌
+     - ✏️
+     - ✏️
      - ❌
      - ❌
    * - :ref:`Nekoweb <backend-Nekoweb>`
      - ``neko://``
-     - ❌
-     - ❌
+     - ✏️
+     - ✏️
      - ❌
      - ❌
