@@ -7,5 +7,6 @@ Concepts
    :caption: Contents:
 
    urls
+   ignores
    redirects
    headers
