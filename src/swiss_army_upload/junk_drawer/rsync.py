@@ -18,7 +18,6 @@ import anyio.to_thread
 import httpx
 
 from .ahashlib import hash_stream
-from .ignores import IgnoreEngine
 
 
 class P_PathInfo(T.Protocol):
@@ -102,7 +101,9 @@ async def _do_hash(file: anyio.AsyncFile[bytes], algo: str, meta: RFileMeta):
 
 
 async def _better_walk(
-    root: anyio.Path, stream: anyio.abc.UnreliableObjectSendStream[anyio.Path]
+    root: anyio.Path,
+    stream: anyio.abc.UnreliableObjectSendStream[anyio.Path],
+    include_file: T.Callable = lambda _: True,
 ):
     """
     Yield all the files within the root, recursively.
@@ -112,6 +113,8 @@ async def _better_walk(
         while q:
             pdir = q.popleft()
             async for file in pdir.iterdir():
+                if not include_file(file):
+                    continue
                 if (await path_info(file)).is_file():
                     await stream.send(file)
                 elif (await path_info(file)).is_dir():
@@ -152,7 +155,7 @@ class SyncEngine(abc.ABC):
     #: Suggested RFileMeta fields to request
     attrs_to_get: list[str]
 
-    ignore_engine: IgnoreEngine
+    include_file: T.Callable[[anyio.Path | httpx.URL], bool]
 
     @abc.abstractmethod
     async def iter_remote(
@@ -185,7 +188,7 @@ class SyncEngine(abc.ABC):
         """
         async with stream, anyio.create_task_group() as tg:
             send, recv = anyio.create_memory_object_stream[anyio.Path]()
-            tg.start_soon(_better_walk, path, send)
+            tg.start_soon(_better_walk, path, send, self.include_file)
             async with recv:
                 async for file in recv:
                     stat = await file.stat()
@@ -239,9 +242,9 @@ class SyncEngine(abc.ABC):
         """
         Do all the metadata work, and produce a stream of operations.
         """
-        include = (
-            self.ignore_engine if hasattr(self, "ignore_engine") else lambda _: True
-        )
+        if not hasattr(self, "include_file"):
+            self.include_file = lambda _: True
+
         async with ops:
             if isinstance(source, anyio.Path):
                 local_root: anyio.Path = T.cast(anyio.Path, source)
@@ -285,14 +288,13 @@ class SyncEngine(abc.ABC):
                     if local2remote
                     else local_root / meta.name
                 )
-                if include(s):
-                    await ops.send(
-                        Operation(
-                            op=Op.DELETE if local2remote else Op.CREATE,
-                            src=s,
-                            dest=d,
-                        )
+                await ops.send(
+                    Operation(
+                        op=Op.DELETE if local2remote else Op.CREATE,
+                        src=s,
+                        dest=d,
                     )
+                )
 
             for name in only_local:
                 meta = local_metas[name]
@@ -306,14 +308,13 @@ class SyncEngine(abc.ABC):
                     if local2remote
                     else local_root / meta.name
                 )
-                if include(s):
-                    await ops.send(
-                        Operation(
-                            op=Op.CREATE if local2remote else Op.DELETE,
-                            src=s,
-                            dest=d,
-                        )
+                await ops.send(
+                    Operation(
+                        op=Op.CREATE if local2remote else Op.DELETE,
+                        src=s,
+                        dest=d,
                     )
+                )
 
             # Third, do annoying metadata stuff
             async def _deep_comparison(name):
@@ -338,14 +339,13 @@ class SyncEngine(abc.ABC):
                         if local2remote
                         else local_root / lmeta.name
                     )
-                    if include(s):
-                        await ops.send(
-                            Operation(
-                                op=Op.UPDATE,
-                                src=s,
-                                dest=d,
-                            )
+                    await ops.send(
+                        Operation(
+                            op=Op.UPDATE,
+                            src=s,
+                            dest=d,
                         )
+                    )
                     return
 
                 # Ok, so we need to do the expensive stuff
@@ -375,14 +375,13 @@ class SyncEngine(abc.ABC):
                         if local2remote
                         else local_root / meta.name
                     )
-                    if include(s):
-                        await ops.send(
-                            Operation(
-                                op=Op.UPDATE,
-                                src=s,
-                                dest=d,
-                            )
+                    await ops.send(
+                        Operation(
+                            op=Op.UPDATE,
+                            src=s,
+                            dest=d,
                         )
+                    )
                     return
 
             in_both = remote_files & local_files
