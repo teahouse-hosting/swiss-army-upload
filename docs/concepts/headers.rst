@@ -23,6 +23,11 @@ One of the features of HTTP is metadata called headers. This is additional infor
 Headers in SAU
 ==============
 
+.. note::
+
+    Redirects have not yet been implemented in Swiss Army Upload. This section is aspirational.
+
+
 Swiss Army Upload supports reading a ``_headers`` file (similar to `Netlify <https://docs.netlify.com/manage/routing/headers/>`_) and applying it to your site.
 
 However, different services have different capabilities. For example, :ref:`backend-gitpages` only allows a specific set of headers to be customized. See :ref:`backends` for specifics.
