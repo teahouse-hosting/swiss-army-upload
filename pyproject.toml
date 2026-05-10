@@ -24,6 +24,7 @@ dependencies = [
 
 [project.urls]
 source = "https://codeberg.org/teahouse/swiss-army-upload"
+docs = "https://swiss-army-upload.teahouse.cafe"
 
 [project.scripts]
 swiss-army-upload = 'swiss_army_upload:entrypoint'
