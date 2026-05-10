@@ -88,7 +88,7 @@ jobs:
         run: |
           poetry config repositories.codeberg https://codeberg.org/api/packages/teahouse/pypi
           poetry config http-basic.codeberg ${{ vars.PAT_USER }} ${{ secrets.PAT_TOKEN }}
-          poetry config http-basic.pypi ${{ vars.PYPI_USER }} ${{ secrets.PYPI_TOKEN }}
+          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
       - name: poetry publish codeberg
         run: poetry publish --no-interaction --repository=codeberg
       - name: poetry publish pypi
