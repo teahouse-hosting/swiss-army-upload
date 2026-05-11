@@ -19,6 +19,7 @@ highlight_language = None
 extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_rtd_theme",
+    "sphinx_inline_tabs",
 ]
 
 templates_path = ["_templates"]

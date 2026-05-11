@@ -9,6 +9,7 @@ Swiss Army Upload is a CLI tool to interact with a varity of static site hosts. 
    :maxdepth: 2
    :caption: Contents:
 
+   guides/index
    concepts/index
    commands/index
    backends/index

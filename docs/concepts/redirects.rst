@@ -15,6 +15,11 @@ One of the features of HTTP is the concept of "redirects": the server telling yo
 Redirects in SAU
 ================
 
+.. note::
+
+    Redirects have not yet been implemented in Swiss Army Upload. This section is aspirational.
+
+
 Swiss Army Upload supports reading a ``_redirects`` file (similar to `Codeberg <https://docs.codeberg.org/codeberg-pages/redirects/>`_ and `Netlify <https://docs.netlify.com/manage/routing/redirects/overview/#syntax-for-the-_redirects-file>`_) and applying them to your site.
 
 However, different services have different capabilities. For example, :ref:`backend-teahouse` does not support wildcards. See :ref:`backends` for specifics.
