@@ -9,7 +9,7 @@ on:
 
 jobs:
   pytest:
-    runs-on: hephestus
+    runs-on: docker-build
     strategy:
       matrix:
         # Based on https://versions.do1g.com/
@@ -32,7 +32,7 @@ jobs:
           poetry run pytest --verbose
 
   mypy:
-    runs-on: hephestus
+    runs-on: codeberg-small
     steps:
       - name: checkout-code
         uses: https://data.forgejo.org/actions/checkout@v4

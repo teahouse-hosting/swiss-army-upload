@@ -17,7 +17,7 @@ concurrency:
 jobs:
   # Build job
   build:
-    runs-on: codeberg-medium
+    runs-on: codeberg-tiny
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
     environment:
       name: teahouse
       url: https://swiss-army-upload.teahouse.cafe
-    runs-on: codeberg-medium
+    runs-on: codeberg-tiny
     enable-openid-connect: true
     needs:
       - build

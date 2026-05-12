@@ -2039,6 +2039,25 @@ websockets = ">=11"
 test = ["httpx", "pytest (>=6)"]
 
 [[package]]
+name = "sphinx-inline-tabs"
+version = "2025.12.21.14"
+description = "Add inline tabbed content to your Sphinx documentation."
+optional = false
+python-versions = ">=3.8"
+groups = ["docs"]
+files = [
+    {file = "sphinx_inline_tabs-2025.12.21.14-py3-none-any.whl", hash = "sha256:e685c782b58d4e01490bcc4e2367cf7135ec28e7283a05e89095394e4ca6e81a"},
+    {file = "sphinx_inline_tabs-2025.12.21.14.tar.gz", hash = "sha256:c71a75800326e613fb4e410eed92a0934214741326aca9897c18018b9f968cb6"},
+]
+
+[package.dependencies]
+sphinx = ">=3"
+
+[package.extras]
+doc = ["furo", "myst-parser"]
+test = ["pytest", "pytest-cov", "pytest-xdist"]
+
+[[package]]
 name = "sphinx-rtd-theme"
 version = "3.1.0"
 description = "Read the Docs theme for Sphinx"
@@ -2499,4 +2518,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "98e8998a5483e6eb19691bf73035b593905d6bcb6dcd6b67171b8bea8342c6d4"
+content-hash = "7fcdaea82dbbef0d581a32c50b263ef8b66e5b96aa97f4d9ac636a6d00b69d5b"

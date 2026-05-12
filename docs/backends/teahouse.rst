@@ -9,8 +9,8 @@ Teahouse Hosting
 :Website: https://teahouse.cafe/
 :Documentation: :external+teahouse:doc:`index`
 :Address Prefix: ``tea://``
-:Redirects: Yes*
-:Headers: Yes*
+:Redirects: Yes
+:Headers: Yes
 :Error Pages: Yes
 
 
@@ -27,27 +27,30 @@ Teahouse Hosting supports OIDC tokens from public and first-party CI/CD pipeline
 
 If SAU is run within a supported service, it'll automatically retrieve and use a token to authenticate with Teahouse. These services are supported:
 
-* GitHub Actions (TODO)
+* GitHub Actions
 * GitLab CI/CD (TODO)
-* Forgejo Actions (TODO)
+* Forgejo Actions
 * Circle CI (TODO)
-* Cirrus CI (TODO)
 
 
 Redirects
 =========
 
-Teahouse supports arbitrary redirects with full HTTP options. You can freely redirect ``/mypage`` to ``/over/here.html`` or to ``https://other.mysite.example/``.
-
- However, it does not support wildcards or rewrites; you cannot redirect ``/dir/*`` to ``/there`` or to ``/other/*``. You have to know the exact path you're redirecting.
-
 .. note::
 
-    Teahouse hasn't actually implemented redirects yet
+    Redirects have not yet been implemented in Swiss Army Upload.
+
+Teahouse supports arbitrary redirects with full HTTP options. You can freely redirect ``/mypage`` to ``/over/here.html`` or to ``https://other.mysite.example/``.
+
+However, it does not support wildcards or rewrites; you cannot redirect ``/dir/*`` to ``/there`` or to ``/other/*``. You have to know the exact path you're redirecting.
 
 
 Headers
 =======
+
+.. note::
+
+    Custom headers have not yet been implemented in Swiss Army Upload.
 
 Teahouse supports arbitrary headers with few restrictions.
 
