@@ -20,6 +20,7 @@ import scr
 from . import Backend, InvalidCredentials, UnknownSite, NoCredentialsFound
 
 # from ..junk_drawer.github import github_oidc
+from ..junk_drawer.ignores import IgnoreEngine
 from ..junk_drawer.keyring import AsyncKeyring
 from ..junk_drawer import rsync
 from ..junk_drawer.sync import sync_to_async
@@ -244,8 +245,9 @@ class TeahouseSync(rsync.SyncEngine):
     # There aren't additional attributes we can get without just downloading the file
     attrs_to_get = []
 
-    def __init__(self, backend: TeahouseBackend):
+    def __init__(self, backend: TeahouseBackend, ie: IgnoreEngine):
         self.backend = backend
+        self.include_file = ie
 
     async def _munge_url(self, url: httpx.URL) -> tuple[handtruck.S3Client, httpx.URL]:
         return await self.backend._munge_url(url)
@@ -265,13 +267,14 @@ class TeahouseSync(rsync.SyncEngine):
             try:
                 async for page in client.list_objects_v2(path):
                     for meta in page:
-                        await stream.send(
-                            rsync.RFileMeta(
-                                name=meta.key,
-                                size=meta.size,
-                                mtime=meta.last_modified,
+                        if self.include_file(path.join(meta.key)):
+                            await stream.send(
+                                rsync.RFileMeta(
+                                    name=meta.key,
+                                    size=meta.size,
+                                    mtime=meta.last_modified,
+                                )
                             )
-                        )
             except handtruck.exceptions.NoSuchKey:
                 # Means this doesn't exist and there's no contents
                 pass
@@ -369,7 +372,8 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
         await client.delete(s3url)
 
     async def rsync_up(self, src: os.PathLike | str, dest: httpx.URL, *, delete: bool):
-        sync = TeahouseSync(self)
+        ie = await self.scr.aget(IgnoreEngine)
+        sync = TeahouseSync(self, ie)
         async with anyio.create_task_group() as tg:
             send, recv = anyio.create_memory_object_stream[rsync.Operation]()
             tg.start_soon(sync, anyio.Path(src), dest, send)
@@ -395,7 +399,8 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
     ):
         pdest = anyio.Path(dest)
         await pdest.mkdir(exist_ok=True, parents=True)
-        sync = TeahouseSync(self)
+        ie = await self.scr.aget(IgnoreEngine)
+        sync = TeahouseSync(self, ie)
         async with anyio.create_task_group() as tg:
             send, recv = anyio.create_memory_object_stream[rsync.Operation]()
             tg.start_soon(sync, src, pdest, send)

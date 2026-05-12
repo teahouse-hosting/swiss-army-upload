@@ -660,14 +660,14 @@ hyperframe = ">=6.1,<7"
 
 [[package]]
 name = "handtruck"
-version = "0.3.0"
+version = "0.3.2"
 description = "Async S3 client using httpx & anyio"
 optional = false
 python-versions = "<4.0,>=3.12"
 groups = ["main"]
 files = [
-    {file = "handtruck-0.3.0-py3-none-any.whl", hash = "sha256:2f33e5de171a4552ecf8ebaca7bc952418dce38b7c2ea7cf3e0c5531bffcd8f6"},
-    {file = "handtruck-0.3.0.tar.gz", hash = "sha256:0a72b47f5c9ef7b03d8682e41e72320a0f5199791496eaaf79374869d0892a2f"},
+    {file = "handtruck-0.3.2-py3-none-any.whl", hash = "sha256:1d692b4098e897a9ca56216ec41bcb18b7368eb71065a912b52f4509c6df3155"},
+    {file = "handtruck-0.3.2.tar.gz", hash = "sha256:30b1e658ce0e227974ed6dcec5668ff78ca6bd1cf01e309c770b860348773cbd"},
 ]
 
 [package.dependencies]
@@ -2518,4 +2518,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "05c7e621bd351b547bb966303e7844b8a696344f1fb71390c9474c3783ee1dad"
+content-hash = "7fcdaea82dbbef0d581a32c50b263ef8b66e5b96aa97f4d9ac636a6d00b69d5b"

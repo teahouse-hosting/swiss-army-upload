@@ -98,3 +98,29 @@ async def test_type_fingerprint(
     resp = await http_client.get(result_url)
     resp.raise_for_status()
     assert resp.headers["Content-Type"] == mimetype
+
+
+@pytest.mark.parametrize(
+    "upload_url",
+    [
+        httpx.URL("tea://katty.teahouse/a-file.txt"),
+    ],
+)
+async def test_upload_empty(
+    keyring,
+    sau_cli,
+    tmp_path,
+    http_client,
+    upload_url,
+):
+    await keyring.set_password(
+        "counter.teahouse.cafe", "alice@valid.test", "sweet little angel"
+    )
+    file_path = tmp_path / upload_url.path.lstrip("/")
+    file_path.write_text("")
+    await sau_cli(["put", file_path, str(upload_url)], check=True)
+
+    result_url = upload_url.copy_with(scheme="https")
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
