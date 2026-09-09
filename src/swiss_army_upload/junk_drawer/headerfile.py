@@ -135,7 +135,7 @@ class NetlifyHeaderFile:
         return self
 
     def _find_items(self, path: str):
-        for key, heads in self._data:
+        for key, heads in self._data.items():
             if key == path:
                 yield heads
             elif isinstance(key, re.Pattern) and key.fullmatch(path):
@@ -150,5 +150,43 @@ class NetlifyHeaderFile:
         spath = "/" + "/".join(path.parts)
         rv = Headers()
         for head in self._find_items(spath):
-            rv |= head
+            rv.update(head)
+        return rv
+
+
+class HeaderManager:
+    """
+    Manages multiple ``_headers``.
+    """
+
+    # directory -> NHF
+    _files: dict[anyio.Path, NetlifyHeaderFile | None]
+
+    def __init__(self):
+        self._files = {}
+
+    async def _find_files(self, path: anyio.Path):
+        for pdir in path.parents:
+            if pdir in self._files:
+                nhf = self._files[pdir]
+                if nhf is not None:
+                    yield pdir, nhf
+            else:
+                head_file = pdir / "_headers"
+                try:
+                    fo = await head_file.open("rt")
+                except FileNotFoundError:
+                    self._files[pdir] = None
+                else:
+                    nhf = self._files[pdir] = await NetlifyHeaderFile.loadf(fo)
+                    yield pdir, nhf
+
+    async def resolve(self, path: anyio.Path | pathlib.PurePath):
+        path = await anyio.Path(path).absolute()
+        nhfs: list[tuple[anyio.Path, NetlifyHeaderFile]] = reversed(
+            [nhf async for nhf in self._find_files(path)]
+        )
+        rv = Headers()
+        for pdir, nhf in nhfs:
+            rv.update(nhf.resolve(path.relative_to(pdir)))
         return rv
