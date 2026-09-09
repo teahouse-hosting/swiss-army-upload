@@ -111,3 +111,49 @@ async def test_modified_file(
     await sau_cli(["sync", remote_url, dest], check=True)
 
     assert (dest / "test.txt").read_text() == "Judith Deuteros"
+
+
+@pytest.mark.parametrize(
+    "remote_url",
+    [
+        "tea://mel.teahouse/",
+        # "pages://mel.gitpages/",
+    ],
+)
+async def test_modified_headers(
+    sau_cli, tmp_path_factory, remote_url, use_good_oidc, http_client
+):
+    src = tmp_path_factory.mktemp("src")
+    result_url = httpx.URL(remote_url).copy_with(scheme="https").join("test.txt")
+
+    (src / "test.txt").write_text("the horrors persist and so do i")
+    (src / "_headers").write_text("""
+/test.txt
+    X-Foo: Bar
+""")
+
+    await sau_cli(
+        ["sync", str(src), f"{remote_url}"],
+        check=True,
+    )
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
+    assert resp.headers["X-Foo"] == "Bar"
+
+    (src / "_headers").write_text("""
+/test.txt
+    X-Spam: Eggs
+""")
+
+    await sau_cli(
+        ["sync", str(src), f"{remote_url}"],
+        check=True,
+    )
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
+    assert resp.headers["X-Spam"] == "Eggs"
+
+
+# TODO: Test that no changes cause no operations
