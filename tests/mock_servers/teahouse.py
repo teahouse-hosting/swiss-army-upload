@@ -138,7 +138,15 @@ async def serv_object(request):
     except handtruck.exceptions.NoSuchKey:
         return Response(b"", 404)
     else:
-        return Response(resp.content, 200, resp.headers)
+        headers = {
+            k.lower().removeprefix("x-amz-meta-"): v
+            for k, v in resp.headers.items()
+            if not (
+                k.lower().startswith("x-amz-")
+                and not k.lower().startswith("x-amz-meta-")
+            )
+        }
+        return Response(resp.content, 200, headers)
 
 
 serv = Starlette(

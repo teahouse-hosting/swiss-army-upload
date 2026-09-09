@@ -290,6 +290,22 @@ class TeahouseSync(rsync.SyncEngine):
         return
 
 
+_S3_PLAIN_HEADERS = {
+    "cache-control",
+    "content-disposition",
+    "content-encoding",
+    "content-language",
+    "content-length",
+    "content-md5",
+    "content-type",
+}
+_S3_DISALLOWED_HEADERS = {
+    # Stuff that'll mess with the upload
+    "if-match",
+    "if-none-match",
+}
+
+
 class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
     _creds: CredCache
 
@@ -369,7 +385,16 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
         headerfiles = await self.scr.aget(HeaderManager)
         client, s3url = await self._munge_url(url)
-        headers = await headerfiles.resolve(file)
+
+        headers = httpx.Headers(
+            {
+                k if k.lower() in _S3_PLAIN_HEADERS else f"x-amz-meta-{k}": v
+                for k, v in (await headerfiles.resolve(file)).items()
+                if k.lower() not in _S3_DISALLOWED_HEADERS
+                if not k.lower().startswith("x-amz-")
+                if not k.lower().startswith("tigris-")
+            }
+        )
         if "Content-Type" not in headers:
             headers["Content-Type"] = await fingerprint_file(file)
         await client.put_file_multipart(s3url, os.fspath(file), headers=headers)
