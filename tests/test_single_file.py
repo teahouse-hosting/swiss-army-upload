@@ -124,3 +124,67 @@ async def test_upload_empty(
 
     resp = await http_client.get(result_url)
     resp.raise_for_status()
+
+
+@pytest.mark.parametrize(
+    "remote_url",
+    [
+        httpx.URL("tea://lily.teahouse/file.txt"),
+        # httpx.URL("pages://lily.gitpages/file.txt"),
+    ],
+)
+async def test_headers(
+    keyring, sau_cli, remote_url, tmp_path, use_good_oidc, http_client
+):
+    data = "Oooooo you like boys ur a boykisser"
+    file_path = tmp_path / remote_url.path.lstrip("/")
+    file_path.write_text(data)
+    (file_path.parent / "_headers").write_text(f"""
+/{file_path.name}
+    X-Meme: Yes
+""")
+    await sau_cli(["put", file_path, str(remote_url)], check=True)
+
+    result_url = remote_url.copy_with(scheme="https")
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
+    assert resp.headers["X-Meme"] == "Yes"
+
+
+@pytest.mark.parametrize(
+    "remote_url",
+    [
+        httpx.URL("tea://mara.teahouse/file.txt"),
+        # httpx.URL("pages://mara.gitpages/file.txt"),
+    ],
+)
+async def test_headers_update(
+    keyring, sau_cli, remote_url, tmp_path, use_good_oidc, http_client
+):
+    data = "polyamory for dnd night"
+    file_path = tmp_path / remote_url.path.lstrip("/")
+    file_path.write_text(data)
+    (file_path.parent / "_headers").write_text(f"""
+/{file_path.name}
+    X-Game: dnd
+""")
+    await sau_cli(["put", file_path, str(remote_url)], check=True)
+
+    result_url = remote_url.copy_with(scheme="https")
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
+    assert resp.headers["X-Game"] == "dnd"
+
+    (file_path.parent / "_headers").write_text(f"""
+/{file_path.name}
+    X-Game: pathfinder
+""")
+    await sau_cli(["put", file_path, str(remote_url)], check=True)
+
+    result_url = remote_url.copy_with(scheme="https")
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
+    assert resp.headers["X-Game"] == "pathfinder"
