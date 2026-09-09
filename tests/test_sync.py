@@ -1,4 +1,6 @@
 from pathlib import Path
+
+import httpx
 import pytest
 
 
@@ -69,3 +71,43 @@ async def test_resync_subdir(sau_cli, tmp_path, remote_url, use_good_oidc):
             continue
         dest_file = tmp_path / src_file.relative_to(PROJECT / "test-site")
         assert src_file.read_text() == dest_file.read_text()
+
+
+@pytest.mark.parametrize(
+    "remote_url",
+    [
+        "tea://lena.teahouse/",
+        # "pages://lena.gitpages/",
+    ],
+)
+async def test_modified_file(
+    sau_cli, tmp_path_factory, remote_url, use_good_oidc, http_client
+):
+    src = tmp_path_factory.mktemp("src")
+    dest = tmp_path_factory.mktemp("dest")
+
+    result_url = httpx.URL(remote_url).copy_with(scheme="https").join("test.txt")
+
+    (src / "test.txt").write_text("John Gaius")
+    await sau_cli(
+        ["sync", str(src), f"{remote_url}"],
+        check=True,
+    )
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
+    assert resp.text == "John Gaius"
+
+    (src / "test.txt").write_text("Judith Deuteros")
+    await sau_cli(
+        ["sync", str(src), f"{remote_url}"],
+        check=True,
+    )
+
+    resp = await http_client.get(result_url)
+    resp.raise_for_status()
+    assert resp.text == "Judith Deuteros"
+
+    await sau_cli(["sync", remote_url, dest], check=True)
+
+    assert (dest / "test.txt").read_text() == "Judith Deuteros"
