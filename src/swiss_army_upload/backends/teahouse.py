@@ -20,11 +20,12 @@ import scr
 from . import Backend, InvalidCredentials, UnknownSite, NoCredentialsFound
 
 # from ..junk_drawer.github import github_oidc
+from ..junk_drawer import rsync
+from ..junk_drawer.headerfile import HeaderManager
 from ..junk_drawer.ignores import IgnoreEngine
 from ..junk_drawer.keyring import AsyncKeyring
-from ..junk_drawer import rsync
-from ..junk_drawer.sync import sync_to_async
 from ..junk_drawer.oidc import oidc_tool
+from ..junk_drawer.sync import sync_to_async
 from ..junk_drawer.typefinger import fingerprint_file
 
 
@@ -282,7 +283,10 @@ class TeahouseSync(rsync.SyncEngine):
     async def fill_remote_meta(
         self, url: httpx.URL, meta: rsync.RFileMeta, field_hints: list[str]
     ):
-        # There's no fields we could query extra for
+        # This should only be called if the file already exists
+        client, path = await self._munge_url(url)
+        # resp = client.head(path)
+        # breakpoint()
         return
 
 
@@ -363,8 +367,11 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
         await sync_to_async(os.utime)(file, (time.time(), mtime))
 
     async def put_from_file(self, file: os.PathLike | str, url: httpx.URL):
+        headerfiles = await self.scr.aget(HeaderManager)
         client, s3url = await self._munge_url(url)
-        headers = {"Content-Type": await fingerprint_file(file)}
+        headers = await headerfiles.resolve(file)
+        if "Content-Type" not in headers:
+            headers["Content-Type"] = await fingerprint_file(file)
         await client.put_file_multipart(s3url, os.fspath(file), headers=headers)
 
     async def _delete_object(self, url: httpx.URL):

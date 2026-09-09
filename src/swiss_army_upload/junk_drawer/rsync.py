@@ -18,6 +18,7 @@ import anyio.to_thread
 import httpx
 
 from .ahashlib import hash_stream
+from .headerfile import HeaderManager
 
 
 class P_PathInfo(T.Protocol):
@@ -61,6 +62,7 @@ class RFileMeta:
     hash_md5: bytes | None = None
     hash_sha1: bytes | None = None
     hash_sha256: bytes | None = None
+    headers: httpx.Headers | None = None
 
     def populated(self) -> dict:
         return {
@@ -132,6 +134,8 @@ class Operation:
     op: Op
     src: anyio.Path | httpx.URL | None
     dest: anyio.Path | httpx.URL
+    smeta: RFileMeta
+    dmeta: RFileMeta
 
 
 def _url_join(url: httpx.URL, stub: str) -> httpx.URL:
@@ -156,6 +160,9 @@ class SyncEngine(abc.ABC):
     attrs_to_get: list[str]
 
     include_file: T.Callable[[anyio.Path | httpx.URL], bool]
+
+    # FIXME: Pull from saucer
+    headers: HeaderManager = HeaderManager()
 
     @abc.abstractmethod
     async def iter_remote(
@@ -191,6 +198,8 @@ class SyncEngine(abc.ABC):
             tg.start_soon(_better_walk, path, send, self.include_file)
             async with recv:
                 async for file in recv:
+                    if file.name == "_headers":
+                        continue
                     stat = await file.stat()
                     await stream.send(
                         RFileMeta(
@@ -199,6 +208,7 @@ class SyncEngine(abc.ABC):
                             mtime=datetime.datetime.fromtimestamp(
                                 stat.st_mtime, tz=datetime.UTC
                             ),
+                            headers=await self.headers.resolve(file),
                         )
                     )
 
@@ -293,6 +303,8 @@ class SyncEngine(abc.ABC):
                         op=Op.DELETE if local2remote else Op.CREATE,
                         src=s,
                         dest=d,
+                        smeta=None if local2remote else meta,
+                        dmeta=meta if local2remote else None,
                     )
                 )
 
@@ -313,6 +325,8 @@ class SyncEngine(abc.ABC):
                         op=Op.CREATE if local2remote else Op.DELETE,
                         src=s,
                         dest=d,
+                        smeta=meta if local2remote else None,
+                        dmeta=None if local2remote else meta,
                     )
                 )
 
@@ -344,6 +358,8 @@ class SyncEngine(abc.ABC):
                             op=Op.UPDATE,
                             src=s,
                             dest=d,
+                            smeta=lmeta if local2remote else rmeta,
+                            dmeta=rmeta if local2remote else lmeta,
                         )
                     )
                     return
@@ -380,6 +396,8 @@ class SyncEngine(abc.ABC):
                             op=Op.UPDATE,
                             src=s,
                             dest=d,
+                            smeta=lmeta if local2remote else rmeta,
+                            dmeta=rmeta if local2remote else lmeta,
                         )
                     )
                     return

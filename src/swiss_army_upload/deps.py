@@ -16,6 +16,7 @@ import scr
 
 from .junk_drawer.cookiejar import SecureSavedJar
 from .junk_drawer import keyring
+from .junk_drawer import headerfile
 
 
 LOG = logging.getLogger(__name__)
@@ -104,6 +105,10 @@ scr.registry.register_factory(keyring.AsyncKeyring, get_keyring, enter=False)
 
 
 scr.registry.register_factory(rich.console.Console, rich.console.Console, enter=False)
+
+scr.registry.register_factory(
+    headerfile.HeaderManager, headerfile.HeaderManager, enter=False
+)
 
 
 @contextlib.asynccontextmanager
