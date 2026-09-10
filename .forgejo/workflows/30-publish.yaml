@@ -21,6 +21,7 @@ env:
 jobs:
   container:
     runs-on: docker-build
+    enable-openid-connect: true
 
     steps:
       - name: Checkout repository
@@ -31,7 +32,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: https://github.com/docker/setup-buildx-action@v3.0.0
 
-      - id: oidc
+      - name: Actions OIDC
+        id: oidc
         uses: https://codeberg.org/teahouse/get-oidc@trunk
         with:
           aud: u:941463:f2362491-3856-443c-9194-5bc119db357e
