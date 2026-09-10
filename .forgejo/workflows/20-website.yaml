@@ -15,9 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  teahouse:
+  # Build job
+  build:
     runs-on: codeberg-tiny
-    enable-openid-connect: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,8 +41,22 @@ jobs:
           name: website
           path: ./docs/_output
 
+  # Deployment job
+  deploy:
+    environment:
+      name: teahouse
+      url: https://swiss-army-upload.teahouse.cafe
+    runs-on: codeberg-tiny
+    enable-openid-connect: true
+    needs:
+      - build
+    if: forgejo.ref == 'refs/heads/trunk'
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: website
+          path: ./docs/_output
       - uses: https://codeberg.org/teahouse/swiss-army-upload.git@trunk
-        if: forgejo.repository == 'teahouse/swiss-army-upload' && startsWith('refs/tags/v', forgejo.ref)
         with:
           src: ./docs/_output
           dest: tea://swiss-army-upload.teahouse.cafe/stable/
