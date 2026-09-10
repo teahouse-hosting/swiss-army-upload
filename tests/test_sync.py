@@ -1,4 +1,6 @@
 from pathlib import Path
+import shutil
+import typing as T
 
 import httpx
 import pytest
@@ -156,4 +158,42 @@ async def test_modified_headers(
     assert resp.headers["X-Spam"] == "Eggs"
 
 
-# TODO: Test that no changes cause no operations
+async def test_noop_teahouse(sau_cli, tmp_path, use_good_oidc):
+    """
+    Test that syncing the same data twice causes no work to be done.
+    """
+    remote_url = httpx.URL("tea://nat.teahouse/")
+    src_dir = tmp_path / "test-site"
+
+    # Set up a complex site
+
+    shutil.copytree(PROJECT / "test-site", src_dir)
+    (src_dir / "_headers").write_text("""
+/index.html
+   Content-Language: en
+""")
+
+    # Do the first sync
+    await sau_cli(["sync", src_dir, str(remote_url)], check=True)
+
+    # Copy/paste the teahouse sync implementation, so we can list what
+    # operations it would run the second time.
+    # FIXME: Do this better
+    import anyio
+    import scr
+    from swiss_army_upload.backends import get_backend
+    from swiss_army_upload.backends.teahouse import TeahouseSync, TeahouseBackend
+    from swiss_army_upload.junk_drawer.ignores import IgnoreEngine
+    from swiss_army_upload.junk_drawer import rsync
+
+    async with scr.ainit(), get_backend(scr.root, remote_url) as thbe:
+        ie = await thbe.scr.aget(IgnoreEngine)
+        sync = TeahouseSync(T.cast(TeahouseBackend, thbe), ie)
+        async with anyio.create_task_group() as tg:
+            send, recv = anyio.create_memory_object_stream[rsync.Operation]()
+            tg.start_soon(sync, anyio.Path(src_dir), remote_url, send)
+            async with recv:
+                ops = [op async for op in recv]
+
+    # Actually check what operations would happen
+    assert len(ops) == 0
