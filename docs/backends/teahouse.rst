@@ -17,7 +17,7 @@ Teahouse Hosting
 Authentication
 ==============
 
-At this time, Swiss Army Upload only supports a single Teahouse login--you can log in to ``tea://`` but you can't log in to ``tea://mysite.example``.
+At this time, Swiss Army Upload only supports a single Teahouse login---you can log in to ``tea://``, but you can't log in to ``tea://mysite.example`` and ``tea://othersite.example`` with distinct accounts.
 
 
 Automations
@@ -33,28 +33,22 @@ If SAU is run within a supported service, it'll automatically retrieve and use a
 * Circle CI (TODO)
 
 
-Redirects
-=========
+Redirects & Headers
+===================
 
 .. note::
 
     Redirects have not yet been implemented in Swiss Army Upload.
 
-Teahouse supports arbitrary redirects with full HTTP options. You can freely redirect ``/mypage`` to ``/over/here.html`` or to ``https://other.mysite.example/``.
+Teahouse supports arbitrary redirects with full HTTP options. You can freely redirect ``/mypage`` to ``/over/here.html`` or to ``https://other.mysite.example/``. Similarly, Teahouse supports modifying headers with few restrictions.
 
-However, it does not support wildcards or rewrites; you cannot redirect ``/dir/*`` to ``/there`` or to ``/other/*``. You have to know the exact path you're redirecting.
+However, all paths must be known and resolved at upload time. Wildcards in ``_headers`` are processed by Swiss Army Upload at upload time, and the complete set of headers are pushed up. (Note that ``_headers`` entries must otherwise exist; a path being mentioned in ``_headers`` will not cause SAU to synthesize a file.)
 
+Similarly, Teahouse does not support wildcard redirects. You cannot redirect ``/dir/*`` to ``/other`` or ``/there/*`` unless all paths are enumerated.
 
-Headers
-=======
+Teahouse supports a special header ``Status-Code`` to cause a page to return something other than ``200 OK``. See :external+teahouse:doc:`guides/objects`.
 
-.. note::
-
-    Custom headers have not yet been implemented in Swiss Army Upload.
-
-Teahouse supports arbitrary headers with few restrictions.
-
-However, like redirects, wildcards are not supported on the server. If you use a ``_headers`` file, Swiss Army Upload will resolve wildcards to specific paths at upload time.
+Headers and redirects are applied to ``_404.html`` and other error pages (see below).
 
 
 Error Pages
