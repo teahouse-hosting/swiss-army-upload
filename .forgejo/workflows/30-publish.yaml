@@ -21,11 +21,6 @@ env:
 jobs:
   container:
     runs-on: docker-build
-    permissions:
-      contents: read
-      # Doesn't do anything yet
-      # https://codeberg.org/forgejo/forgejo/issues/3571
-      # packages: write
 
     steps:
       - name: Checkout repository
@@ -36,14 +31,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: https://github.com/docker/setup-buildx-action@v3.0.0
 
+      - id: oidc
+        uses: https://codeberg.org/teahouse/get-oidc@trunk
+        with:
+          aud: u:941463:f2362491-3856-443c-9194-5bc119db357e
+
       # Login against a Docker registry except on PR
       - name: Log into registry
-        if: github.event_name != 'pull_request'
+        # if: github.event_name != 'pull_request'
         uses: https://github.com/docker/login-action@v3.0.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ vars.PAT_USER }}
-          password: ${{ secrets.PAT_TOKEN }}
+          password: ${{ steps.oidc.outputs.jwt }}
 
       # Extract metadata (tags, labels) for Docker
       - name: Extract Docker metadata
