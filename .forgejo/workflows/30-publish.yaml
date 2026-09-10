@@ -33,6 +33,7 @@ jobs:
         uses: https://github.com/docker/setup-buildx-action@v3.0.0
 
       - name: Actions OIDC
+        if: github.event_name != 'pull_request'
         id: oidc
         uses: https://codeberg.org/teahouse/get-oidc@trunk
         with:
@@ -40,7 +41,7 @@ jobs:
 
       # Login against a Docker registry except on PR
       - name: Log into registry
-        # if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         uses: https://github.com/docker/login-action@v3.0.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -69,17 +70,19 @@ jobs:
   pypi:
     runs-on: codeberg-tiny-lazy
     if: forgejo.event_name != 'schedule'
-    permissions:
-      contents: read
-      # Doesn't do anything yet
-      # https://codeberg.org/forgejo/forgejo/issues/3571
-      # packages: write
 
     steps:
       - name: Checkout repository
         uses: https://data.forgejo.org/actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Actions OIDC
+        id: oidc
+        uses: https://codeberg.org/teahouse/get-oidc@trunk
+        with:
+          aud: u:941463:f2362491-3856-443c-9194-5bc119db357e
+
       - name: install poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
@@ -89,7 +92,7 @@ jobs:
       - name: configure registry
         run: |
           poetry config repositories.codeberg https://codeberg.org/api/packages/teahouse/pypi
-          poetry config http-basic.codeberg ${{ vars.PAT_USER }} ${{ secrets.PAT_TOKEN }}
+          poetry config http-basic.codeberg ${{ vars.PAT_USER }} ${{ steps.oidc.outputs.jwt }}
           poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
       - name: poetry publish codeberg
         run: poetry publish --no-interaction --repository=codeberg
