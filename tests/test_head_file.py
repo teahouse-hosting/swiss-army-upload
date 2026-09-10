@@ -28,12 +28,14 @@ async def test_symmetric_parsing(tmp_path):
   X-Frame-Options: SAMEORIGIN
 """
 
-    nhf1 = None
     bytes_send, bytes_receive = create_memory_object_stream[bytes](1)
 
     async def _send():
         async with bytes_send:
             await bytes_send.send(data)
+
+    # Filler object to make mypy+ruff happy
+    nhf1 = NetlifyHeaderFile()
 
     async def _recv():
         nonlocal nhf1

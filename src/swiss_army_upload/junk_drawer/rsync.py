@@ -7,6 +7,7 @@ import collections
 import dataclasses
 import datetime
 import enum
+import logging
 import posixpath
 import sys
 import typing as T
@@ -17,8 +18,12 @@ import anyio.streams.file
 import anyio.to_thread
 import httpx
 
+from . import parse_http_date
 from .ahashlib import hash_stream
 from .headerfile import HeaderManager
+
+
+LOG = logging.getLogger(__name__)
 
 
 class P_PathInfo(T.Protocol):
@@ -62,9 +67,14 @@ class RFileMeta:
     hash_md5: bytes | None = None
     hash_sha1: bytes | None = None
     hash_sha256: bytes | None = None
+    # Exists because it might be implied or it might be in _headers
+    content_type: str | None = None
     headers: httpx.Headers | None = None
 
     def populated(self) -> dict:
+        # Do some data normalization
+        if self.mtime is not None and self.mtime.microsecond:
+            self.mtime = self.mtime.replace(microsecond=0)
         return {
             key: val
             for key, val in vars(self).items()
@@ -93,6 +103,37 @@ class RFileMeta:
             if aname.startswith("hash_")
             if getattr(self, aname) is None
         ]
+
+    def set_headers(self, headers: httpx.Headers):
+        """
+        Given some headers, update self with their values.
+
+        Some values are popped, and self.headers is replaced by the rest
+        """
+        headers = headers.copy()
+
+        try:
+            self.content_type = headers.pop("Content-Type")
+        except KeyError:
+            pass
+
+        try:
+            self.size = int(cl := headers.pop("Content-Length"))
+        except ValueError:
+            LOG.warn("Malformed Content-Length: %s", cl)
+        except KeyError:
+            pass
+
+        try:
+            self.mtime = parse_http_date(lm := headers.pop("Last-Modified"))
+        except ValueError:
+            LOG.warn("Malformed Last-Modified: %s", lm)
+        except KeyError:
+            pass
+
+        self.headers = headers
+
+        return self
 
 
 async def _do_hash(file: anyio.AsyncFile[bytes], algo: str, meta: RFileMeta):
@@ -134,8 +175,8 @@ class Operation:
     op: Op
     src: anyio.Path | httpx.URL | None
     dest: anyio.Path | httpx.URL
-    smeta: RFileMeta
-    dmeta: RFileMeta
+    smeta: RFileMeta | None
+    dmeta: RFileMeta | None
 
 
 def _url_join(url: httpx.URL, stub: str) -> httpx.URL:
@@ -161,8 +202,7 @@ class SyncEngine(abc.ABC):
 
     include_file: T.Callable[[anyio.Path | httpx.URL], bool]
 
-    # FIXME: Pull from saucer
-    headers: HeaderManager = HeaderManager()
+    headers: HeaderManager
 
     @abc.abstractmethod
     async def iter_remote(
@@ -208,8 +248,9 @@ class SyncEngine(abc.ABC):
                             mtime=datetime.datetime.fromtimestamp(
                                 stat.st_mtime, tz=datetime.UTC
                             ),
-                            headers=await self.headers.resolve(file),
-                        )
+                            # Headers are pretty cheap, esp amortized over a bunch of files.
+                            # (Certainly cheaper than hashes)
+                        ).set_headers(await self.headers.resolve(file))
                     )
 
     async def fill_local_meta(
@@ -254,6 +295,9 @@ class SyncEngine(abc.ABC):
         """
         if not hasattr(self, "include_file"):
             self.include_file = lambda _: True
+
+        # FIXME: Pull from saucer
+        self.headers = HeaderManager()
 
         async with ops:
             if isinstance(source, anyio.Path):
@@ -382,14 +426,14 @@ class SyncEngine(abc.ABC):
                 if not _intersect_eq(rmeta.populated(), lmeta.populated()):
                     # Mismatch on the hard stuff
                     s = (
-                        local_root / meta.name
+                        local_root / lmeta.name
                         if local2remote
-                        else _url_join(remote_root, meta.name)
+                        else _url_join(remote_root, rmeta.name)
                     )
                     d = (
-                        _url_join(remote_root, meta.name)
+                        _url_join(remote_root, rmeta.name)
                         if local2remote
-                        else local_root / meta.name
+                        else local_root / lmeta.name
                     )
                     await ops.send(
                         Operation(

@@ -160,6 +160,9 @@ async def sau_cli():
                 traceback.print_exc()  # TODO: Shove into stderr
         else:
             cp = subprocess.CompletedProcess(argv, 0)
+        finally:
+            # main()+ainit() should be resetting this, but let's be really sure.
+            del scr.root
 
         if check and cp.returncode:
             raise subprocess.CalledProcessError(

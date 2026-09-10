@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import datetime
 from http import HTTPStatus
 import http.cookiejar
 import logging
@@ -19,7 +20,7 @@ import scr
 
 from . import Backend, InvalidCredentials, UnknownSite, NoCredentialsFound
 
-# from ..junk_drawer.github import github_oidc
+from ..junk_drawer import format_http_date, parse_http_date
 from ..junk_drawer import rsync
 from ..junk_drawer.headerfile import HeaderManager
 from ..junk_drawer.ignores import IgnoreEngine
@@ -39,6 +40,22 @@ SIGNER_ENV_MAP = {
     "AWS_SECRET_ACCESS_KEY": "secret_access_key",
     "AWS_SESSION_TOKEN": "session_token",
     # "BUCKET_NAME": ...,
+}
+
+_S3_PLAIN_HEADERS = {
+    "cache-control",
+    "content-disposition",
+    "content-encoding",
+    "content-language",
+    "content-length",
+    "content-md5",
+    "content-type",
+}
+
+_S3_DISALLOWED_HEADERS = {
+    # Stuff that'll mess with the upload
+    "if-match",
+    "if-none-match",
 }
 
 
@@ -273,7 +290,9 @@ class TeahouseSync(rsync.SyncEngine):
                                 rsync.RFileMeta(
                                     name=meta.key,
                                     size=meta.size,
-                                    mtime=meta.last_modified,
+                                    # This is the last uploaded date, and might
+                                    # be overriden by metadata
+                                    # mtime=meta.last_modified,
                                 )
                             )
             except handtruck.exceptions.NoSuchKey:
@@ -285,25 +304,33 @@ class TeahouseSync(rsync.SyncEngine):
     ):
         # This should only be called if the file already exists
         client, path = await self._munge_url(url)
-        # resp = client.head(path)
-        # breakpoint()
-        return
+        resp = await client.head(path)
 
+        if "x-amz-meta-last-modified" in resp.headers:
+            try:
+                meta.mtime = parse_http_date(resp.headers["Last-Modified"])
+            except ValueError:
+                pass
+        elif "Last-Modified" in resp.headers:
+            try:
+                meta.mtime = parse_http_date(resp.headers["Last-Modified"])
+            except ValueError:
+                pass
 
-_S3_PLAIN_HEADERS = {
-    "cache-control",
-    "content-disposition",
-    "content-encoding",
-    "content-language",
-    "content-length",
-    "content-md5",
-    "content-type",
-}
-_S3_DISALLOWED_HEADERS = {
-    # Stuff that'll mess with the upload
-    "if-match",
-    "if-none-match",
-}
+        meta.set_headers(
+            httpx.Headers(
+                [
+                    (k, v)
+                    for k, v in resp.headers.multi_items()
+                    if k in _S3_PLAIN_HEADERS
+                ]
+                + [
+                    (k.lower().removeprefix("x-amz-meta-"), v)
+                    for k, v in resp.headers.multi_items()
+                    if k.lower().startswith("x-amz-meta-")
+                ]
+            )
+        )
 
 
 class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
@@ -386,18 +413,30 @@ class TeahouseBackend(anyio.AsyncContextManagerMixin, Backend):
         headerfiles = await self.scr.aget(HeaderManager)
         client, s3url = await self._munge_url(url)
 
+        file = anyio.Path(file)
+        stat = await file.stat()
+        mtime = datetime.datetime.fromtimestamp(stat.st_mtime, datetime.timezone.utc)
+
         headers = httpx.Headers(
             {
-                k if k.lower() in _S3_PLAIN_HEADERS else f"x-amz-meta-{k}": v
-                for k, v in (await headerfiles.resolve(file)).items()
-                if k.lower() not in _S3_DISALLOWED_HEADERS
-                if not k.lower().startswith("x-amz-")
-                if not k.lower().startswith("tigris-")
+                "x-amz-meta-last-modified": format_http_date(mtime),
             }
+        )
+
+        headers.update(
+            httpx.Headers(
+                {
+                    k if k.lower() in _S3_PLAIN_HEADERS else f"x-amz-meta-{k}": v
+                    for k, v in (await headerfiles.resolve(file)).items()
+                    if k.lower() not in _S3_DISALLOWED_HEADERS
+                    if not k.lower().startswith("x-amz-")
+                    if not k.lower().startswith("tigris-")
+                }
+            )
         )
         if "Content-Type" not in headers:
             headers["Content-Type"] = await fingerprint_file(file)
-        await client.put_file_multipart(s3url, os.fspath(file), headers=headers)
+        await client.put_file_multipart(s3url, file, headers=dict(headers.items()))
 
     async def _delete_object(self, url: httpx.URL):
         client, s3url = await self._munge_url(url)

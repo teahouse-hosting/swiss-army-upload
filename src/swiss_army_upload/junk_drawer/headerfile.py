@@ -1,5 +1,6 @@
 import re
 import pathlib
+import typing as T
 
 import anyio
 from anyio import AsyncFile
@@ -34,7 +35,7 @@ class NetlifyHeaderFile:
         """
         Coroutine that accepts one line at a time and populates the object.
         """
-        current_heads = list()
+        current_heads = Headers()
         while True:
             line: str | None = yield
             if line is None:
@@ -49,12 +50,15 @@ class NetlifyHeaderFile:
             else:
                 # Route line
                 route = line.strip()
+                proute: str | re.Pattern
                 if "*" in route or ":" in route:
-                    route = re.compile(self._build_wildcard_regex(route))
-                if route in self._data:
-                    current_heads = self._data[route]
+                    proute = re.compile(self._build_wildcard_regex(route))
                 else:
-                    current_heads = self._data[route] = Headers()
+                    proute = route
+                if route in self._data:
+                    current_heads = self._data[proute]
+                else:
+                    current_heads = self._data[proute] = Headers()
 
     def _build_wildcard_regex(self, txt: str):
         def subs(m: re.Match):
@@ -68,7 +72,7 @@ class NetlifyHeaderFile:
         return _PLACEHOLDER_WILDCARD.sub(subs, txt)
 
     @classmethod
-    async def load(cls, stream: TextReceiveStream):
+    async def load(cls, stream: TextReceiveStream) -> T.Self:
         """
         Instantiate from the textual data read from a stream.
         """
@@ -92,7 +96,7 @@ class NetlifyHeaderFile:
         return self
 
     @classmethod
-    async def loadf(cls, file: AsyncFile):
+    async def loadf(cls, file: AsyncFile) -> T.Self:
         """
         Instantiate from the textual data read from a stream.
 
@@ -117,7 +121,7 @@ class NetlifyHeaderFile:
         return self
 
     @classmethod
-    def loads(cls, txt: str):
+    def loads(cls, txt: str) -> T.Self:
         """
         Read a text blob
         """
@@ -165,7 +169,9 @@ class HeaderManager:
     def __init__(self):
         self._files = {}
 
-    async def _find_files(self, path: anyio.Path):
+    async def _find_files(
+        self, path: anyio.Path
+    ) -> T.AsyncIterator[tuple[anyio.Path, NetlifyHeaderFile]]:
         for pdir in path.parents:
             if pdir in self._files:
                 nhf = self._files[pdir]
@@ -183,9 +189,7 @@ class HeaderManager:
 
     async def resolve(self, path: anyio.Path | pathlib.PurePath):
         path = await anyio.Path(path).absolute()
-        nhfs: list[tuple[anyio.Path, NetlifyHeaderFile]] = reversed(
-            [nhf async for nhf in self._find_files(path)]
-        )
+        nhfs = reversed([nhf async for nhf in self._find_files(path)])
         rv = Headers()
         for pdir, nhf in nhfs:
             rv.update(nhf.resolve(path.relative_to(pdir)))
