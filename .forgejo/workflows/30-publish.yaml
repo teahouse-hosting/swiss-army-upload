@@ -17,11 +17,11 @@ env:
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
 
+enable-openid-connect: true
 
 jobs:
   container:
     runs-on: docker-build
-    enable-openid-connect: true
 
     steps:
       - name: Checkout repository
