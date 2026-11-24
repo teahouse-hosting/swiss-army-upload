@@ -1,10 +1,10 @@
-import io
+import typing as T
 import os
 
 import pytest
 
 
-def text_pipe() -> tuple[io]:
+def text_pipe() -> tuple[T.IO[str], T.IO[str]]:
     """
     Opens a pipe, wraps it in text stuff, and returns the writable and readable
     ends.
@@ -19,8 +19,8 @@ async def test_teahouse_good(sau_cli, monkeypatch):
     pipe_in, pipe_out = text_pipe()
     monkeypatch.setattr("sys.stdin", pipe_out)
     # Hoping the internal pipe buffer is bigger than this
-    with pipe_in:
-        pipe_in.write("pearl@valid.test\n")
+    pipe_in.write("pearl@valid.test\n")
+    pipe_in.close()
 
     def getpass(*p, **kw):
         return "do it for her"
@@ -28,6 +28,5 @@ async def test_teahouse_good(sau_cli, monkeypatch):
     monkeypatch.setattr("getpass.getpass", getpass)
     monkeypatch.setattr("rich.console.getpass", getpass)
 
-    with pipe_out:
-        proc = await sau_cli(["login", "tea://"])
-        assert proc.returncode == 0
+    proc = await sau_cli(["login", "tea://"])
+    assert proc.returncode == 0
