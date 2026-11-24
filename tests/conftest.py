@@ -111,10 +111,13 @@ async def http_client(
 
 @pytest.fixture(autouse=True)
 async def keyring():
-    ring = MockKeyring()
-    scr.registry.register_value(AsyncKeyring, ring, enter=False)
-    yield ring
-    scr.registry.register_value(AsyncKeyring, None, enter=False)
+    if "PYTHON_KEYRING_BACKEND" in os.environ:
+        raise NotImplementedError
+    else:
+        ring = MockKeyring()
+        scr.registry.register_value(AsyncKeyring, ring, enter=False)
+        yield ring
+        scr.registry.register_value(AsyncKeyring, None, enter=False)
 
 
 @pytest.fixture
