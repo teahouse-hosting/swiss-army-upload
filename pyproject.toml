@@ -42,7 +42,7 @@ pages = "swiss_army_upload.backends.gitpages:GitPagesBackend"
 
 [dependency-groups]
 dev = [
-    "mypy (>=1.19.0,<2.0.0)",
+    "mypy (>=2.0.0,<3.0.0)",
     "pytest (>=9.0.2,<10.0.0)",
     "httpx[http2] (>=0.28.1,<0.29.0)",
     "keyrings-alt (>=5.0.2,<6.0.0)",
