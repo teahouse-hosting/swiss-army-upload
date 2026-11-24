@@ -57,7 +57,7 @@ async def user_info(request):
     if get_auth(request):
         return await whoami(request)
     else:
-        return RedirectResponse(url="/user/login/")
+        return RedirectResponse(url="/auth/login/")
 
 
 async def whoami(request):

@@ -48,6 +48,7 @@ dev = [
     "keyrings-alt (>=5.0.2,<6.0.0)",
     "starlette (>=0.52.1,<0.53.0)",
     "pytest-ephemeral-container (>=0.3.0)",
+    "pytest-timeout (>=2.4.0,<3.0.0)",
 ]
 docs = [
     "sphinx (>=9.1.0,<10.0.0)",
